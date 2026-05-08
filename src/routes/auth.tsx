@@ -101,7 +101,7 @@ function Field({ label, type, value, onChange }: { label: string; type: string; 
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} required minLength={type === "password" ? 6 : undefined} />
+      <Input type={type} value={value} onChange={(e) => onChange(e.target.value)} required minLength={type === "password" ? 8 : undefined} />
     </div>
   );
 }
