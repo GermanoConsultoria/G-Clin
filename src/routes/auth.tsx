@@ -34,13 +34,26 @@ function AuthPage() {
   const signUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    if (password.length < 8) {
+      setLoading(false);
+      return toast.error("A senha deve ter pelo menos 8 caracteres.");
+    }
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: `${window.location.origin}/dashboard` },
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) {
+      const msg = error.message.toLowerCase();
+      if (msg.includes("weak") || msg.includes("pwned")) {
+        return toast.error("Senha muito fraca ou já vazada em outros sites. Escolha uma senha mais forte (ex: combine letras, números e símbolos).");
+      }
+      if (msg.includes("already") || msg.includes("registered")) {
+        return toast.error("Este email já está cadastrado. Faça login.");
+      }
+      return toast.error(error.message);
+    }
     toast.success("Conta criada! Verifique seu email para confirmar.");
   };
 
