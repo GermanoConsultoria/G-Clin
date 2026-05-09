@@ -121,81 +121,99 @@ function Dashboard() {
 
       {loading ? (
         <div className="text-muted-foreground">Carregando...</div>
-      ) : appts.length === 0 ? (
-        <div className="rounded-2xl border border-dashed bg-card p-12 text-center">
-          <CalendarIcon className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h3 className="mt-4 font-display text-lg font-semibold">Nenhum agendamento ainda</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Clique em "Novo agendamento" para começar.</p>
-        </div>
       ) : (
-        <div className="grid gap-3">
-          {appts.map((a) => {
-            const date = new Date(a.scheduled_at);
-            const s = statusStyle[a.status];
-            const SIcon = s.icon;
-            return (
-              <div key={a.id} className="flex flex-col gap-4 rounded-2xl border bg-card p-5 shadow-[var(--shadow-card)] md:flex-row md:items-center md:justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                    <div className="text-center leading-tight">
-                      <div className="text-xs font-medium uppercase">{format(date, "MMM", { locale: ptBR })}</div>
-                      <div className="text-lg font-bold">{format(date, "dd")}</div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-display text-lg font-semibold">{a.patient_name}</h3>
-                      <Badge variant="outline" className={s.cls}>
-                        <SIcon className="mr-1 h-3 w-3" /> {s.label}
-                      </Badge>
-                      <Badge variant="secondary">{a.type === "retorno" ? "Retorno" : "Consulta"}</Badge>
-                      {a.category && <Badge variant="outline">{a.category}</Badge>}
-                      {a.wants_to_anticipate && (
-                        <Badge variant="outline" className="border-primary/30 text-primary">
-                          <Zap className="mr-1 h-3 w-3" /> Aceita antecipar
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      <span>{format(date, "EEEE, HH:mm", { locale: ptBR })}</span>
-                      <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{a.phone}</span>
-                      {a.plan_name && <span>Plano: {a.plan_name}</span>}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" className="bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90">
-                        <MessageCircle className="h-4 w-4" /> WhatsApp
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => sendWhats(a, "agendamento")}>Enviar agendamento</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => sendWhats(a, "confirmacao")}>Confirmar (24h antes)</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => sendWhats(a, "reagendamento")}>Reagendar</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Select value={a.status} onValueChange={(v) => updateStatus(a, v as Appointment["status"])}>
-                    <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="agendado">Aguardando</SelectItem>
-                      <SelectItem value="confirmado">Confirmado (sim)</SelectItem>
-                      <SelectItem value="cancelado">Cancelado (não)</SelectItem>
-                      <SelectItem value="concluido">Concluído</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button variant="ghost" size="icon" onClick={() => { setEditing(a); setOpen(true); }}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(a.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+        <Tabs defaultValue="list" className="w-full">
+          <TabsList>
+            <TabsTrigger value="list"><List className="h-4 w-4 mr-1" /> Lista</TabsTrigger>
+            <TabsTrigger value="calendar"><CalendarIcon className="h-4 w-4 mr-1" /> Calendário</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="list" className="mt-4">
+            {appts.length === 0 ? (
+              <div className="rounded-2xl border border-dashed bg-card p-12 text-center">
+                <CalendarIcon className="mx-auto h-10 w-10 text-muted-foreground" />
+                <h3 className="mt-4 font-display text-lg font-semibold">Nenhum agendamento ainda</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Clique em "Novo agendamento" para começar.</p>
               </div>
-            );
-          })}
-        </div>
+            ) : (
+              <div className="grid gap-3">
+                {appts.map((a) => {
+                  const date = new Date(a.scheduled_at);
+                  const s = statusStyle[a.status];
+                  const SIcon = s.icon;
+                  return (
+                    <div key={a.id} className="flex flex-col gap-4 rounded-2xl border bg-card p-5 shadow-[var(--shadow-card)] md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-start gap-4">
+                        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                          <div className="text-center leading-tight">
+                            <div className="text-xs font-medium uppercase">{format(date, "MMM", { locale: ptBR })}</div>
+                            <div className="text-lg font-bold">{format(date, "dd")}</div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-display text-lg font-semibold">{a.patient_name}</h3>
+                            <Badge variant="outline" className={s.cls}>
+                              <SIcon className="mr-1 h-3 w-3" /> {s.label}
+                            </Badge>
+                            <Badge variant="secondary">{a.type === "retorno" ? "Retorno" : "Consulta"}</Badge>
+                            {a.category && <Badge variant="outline">{a.category}</Badge>}
+                            {a.wants_to_anticipate && (
+                              <Badge variant="outline" className="border-primary/30 text-primary">
+                                <Zap className="mr-1 h-3 w-3" /> Aceita antecipar
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            <span>{format(date, "EEEE, HH:mm", { locale: ptBR })}</span>
+                            <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{a.phone}</span>
+                            {a.plan_name && <span>Plano: {a.plan_name}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" className="bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90">
+                              <MessageCircle className="h-4 w-4" /> WhatsApp
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => sendWhats(a, "agendamento")}>Enviar agendamento</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => sendWhats(a, "confirmacao")}>Confirmar (24h antes)</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => sendWhats(a, "reagendamento")}>Reagendar</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Select value={a.status} onValueChange={(v) => updateStatus(a, v as Appointment["status"])}>
+                          <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="agendado">Aguardando</SelectItem>
+                            <SelectItem value="confirmado">Confirmado (sim)</SelectItem>
+                            <SelectItem value="cancelado">Cancelado (não)</SelectItem>
+                            <SelectItem value="concluido">Concluído</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditing(a); setOpen(true); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => onDelete(a.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="calendar" className="mt-4">
+            <CalendarView
+              appts={appts}
+              onEdit={(a) => { setEditing(a); setOpen(true); }}
+            />
+          </TabsContent>
+        </Tabs>
       )}
 
       <AnticipateDialog
