@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, MessageCircle, Trash2, Pencil, Calendar as CalendarIcon, Phone, Zap, AlertTriangle, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, MessageCircle, Trash2, Pencil, Calendar as CalendarIcon, Phone, Zap, AlertTriangle, CheckCircle2, XCircle, Clock, List, ChevronLeft, ChevronRight } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
