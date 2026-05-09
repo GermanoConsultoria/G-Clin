@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, MessageCircle, Trash2, Pencil, Calendar as CalendarIcon, Phone, Zap, AlertTriangle, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Plus, MessageCircle, Trash2, Pencil, Calendar as CalendarIcon, Phone, Zap, AlertTriangle, CheckCircle2, XCircle, Clock, List, ChevronLeft, ChevronRight } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,81 +121,99 @@ function Dashboard() {
 
       {loading ? (
         <div className="text-muted-foreground">Carregando...</div>
-      ) : appts.length === 0 ? (
-        <div className="rounded-2xl border border-dashed bg-card p-12 text-center">
-          <CalendarIcon className="mx-auto h-10 w-10 text-muted-foreground" />
-          <h3 className="mt-4 font-display text-lg font-semibold">Nenhum agendamento ainda</h3>
-          <p className="mt-1 text-sm text-muted-foreground">Clique em "Novo agendamento" para começar.</p>
-        </div>
       ) : (
-        <div className="grid gap-3">
-          {appts.map((a) => {
-            const date = new Date(a.scheduled_at);
-            const s = statusStyle[a.status];
-            const SIcon = s.icon;
-            return (
-              <div key={a.id} className="flex flex-col gap-4 rounded-2xl border bg-card p-5 shadow-[var(--shadow-card)] md:flex-row md:items-center md:justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                    <div className="text-center leading-tight">
-                      <div className="text-xs font-medium uppercase">{format(date, "MMM", { locale: ptBR })}</div>
-                      <div className="text-lg font-bold">{format(date, "dd")}</div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-display text-lg font-semibold">{a.patient_name}</h3>
-                      <Badge variant="outline" className={s.cls}>
-                        <SIcon className="mr-1 h-3 w-3" /> {s.label}
-                      </Badge>
-                      <Badge variant="secondary">{a.type === "retorno" ? "Retorno" : "Consulta"}</Badge>
-                      {a.category && <Badge variant="outline">{a.category}</Badge>}
-                      {a.wants_to_anticipate && (
-                        <Badge variant="outline" className="border-primary/30 text-primary">
-                          <Zap className="mr-1 h-3 w-3" /> Aceita antecipar
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                      <span>{format(date, "EEEE, HH:mm", { locale: ptBR })}</span>
-                      <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{a.phone}</span>
-                      {a.plan_name && <span>Plano: {a.plan_name}</span>}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button size="sm" className="bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90">
-                        <MessageCircle className="h-4 w-4" /> WhatsApp
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => sendWhats(a, "agendamento")}>Enviar agendamento</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => sendWhats(a, "confirmacao")}>Confirmar (24h antes)</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => sendWhats(a, "reagendamento")}>Reagendar</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  <Select value={a.status} onValueChange={(v) => updateStatus(a, v as Appointment["status"])}>
-                    <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="agendado">Aguardando</SelectItem>
-                      <SelectItem value="confirmado">Confirmado (sim)</SelectItem>
-                      <SelectItem value="cancelado">Cancelado (não)</SelectItem>
-                      <SelectItem value="concluido">Concluído</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button variant="ghost" size="icon" onClick={() => { setEditing(a); setOpen(true); }}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => onDelete(a.id)}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
+        <Tabs defaultValue="list" className="w-full">
+          <TabsList>
+            <TabsTrigger value="list"><List className="h-4 w-4 mr-1" /> Lista</TabsTrigger>
+            <TabsTrigger value="calendar"><CalendarIcon className="h-4 w-4 mr-1" /> Calendário</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="list" className="mt-4">
+            {appts.length === 0 ? (
+              <div className="rounded-2xl border border-dashed bg-card p-12 text-center">
+                <CalendarIcon className="mx-auto h-10 w-10 text-muted-foreground" />
+                <h3 className="mt-4 font-display text-lg font-semibold">Nenhum agendamento ainda</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Clique em "Novo agendamento" para começar.</p>
               </div>
-            );
-          })}
-        </div>
+            ) : (
+              <div className="grid gap-3">
+                {appts.map((a) => {
+                  const date = new Date(a.scheduled_at);
+                  const s = statusStyle[a.status];
+                  const SIcon = s.icon;
+                  return (
+                    <div key={a.id} className="flex flex-col gap-4 rounded-2xl border bg-card p-5 shadow-[var(--shadow-card)] md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-start gap-4">
+                        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                          <div className="text-center leading-tight">
+                            <div className="text-xs font-medium uppercase">{format(date, "MMM", { locale: ptBR })}</div>
+                            <div className="text-lg font-bold">{format(date, "dd")}</div>
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-display text-lg font-semibold">{a.patient_name}</h3>
+                            <Badge variant="outline" className={s.cls}>
+                              <SIcon className="mr-1 h-3 w-3" /> {s.label}
+                            </Badge>
+                            <Badge variant="secondary">{a.type === "retorno" ? "Retorno" : "Consulta"}</Badge>
+                            {a.category && <Badge variant="outline">{a.category}</Badge>}
+                            {a.wants_to_anticipate && (
+                              <Badge variant="outline" className="border-primary/30 text-primary">
+                                <Zap className="mr-1 h-3 w-3" /> Aceita antecipar
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            <span>{format(date, "EEEE, HH:mm", { locale: ptBR })}</span>
+                            <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{a.phone}</span>
+                            {a.plan_name && <span>Plano: {a.plan_name}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" className="bg-whatsapp text-whatsapp-foreground hover:bg-whatsapp/90">
+                              <MessageCircle className="h-4 w-4" /> WhatsApp
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => sendWhats(a, "agendamento")}>Enviar agendamento</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => sendWhats(a, "confirmacao")}>Confirmar (24h antes)</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => sendWhats(a, "reagendamento")}>Reagendar</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Select value={a.status} onValueChange={(v) => updateStatus(a, v as Appointment["status"])}>
+                          <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="agendado">Aguardando</SelectItem>
+                            <SelectItem value="confirmado">Confirmado (sim)</SelectItem>
+                            <SelectItem value="cancelado">Cancelado (não)</SelectItem>
+                            <SelectItem value="concluido">Concluído</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button variant="ghost" size="icon" onClick={() => { setEditing(a); setOpen(true); }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => onDelete(a.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="calendar" className="mt-4">
+            <CalendarView
+              appts={appts}
+              onEdit={(a) => { setEditing(a); setOpen(true); }}
+            />
+          </TabsContent>
+        </Tabs>
       )}
 
       <AnticipateDialog
@@ -417,5 +436,139 @@ function AppointmentDialog({
         </DialogFooter>
       </form>
     </DialogContent>
+  );
+}
+
+function CalendarView({ appts, onEdit }: { appts: Appointment[]; onEdit: (a: Appointment) => void }) {
+  const [cursor, setCursor] = useState(new Date());
+  const [selected, setSelected] = useState<Date>(new Date());
+
+  const days = useMemo(() => {
+    const start = startOfWeek(startOfMonth(cursor), { weekStartsOn: 0 });
+    const end = endOfWeek(endOfMonth(cursor), { weekStartsOn: 0 });
+    const arr: Date[] = [];
+    let d = start;
+    while (d <= end) { arr.push(d); d = addDays(d, 1); }
+    return arr;
+  }, [cursor]);
+
+  const byDay = useMemo(() => {
+    const map = new Map<string, Appointment[]>();
+    for (const a of appts) {
+      const k = format(new Date(a.scheduled_at), "yyyy-MM-dd");
+      const arr = map.get(k) ?? [];
+      arr.push(a);
+      map.set(k, arr);
+    }
+    return map;
+  }, [appts]);
+
+  const dayList = (byDay.get(format(selected, "yyyy-MM-dd")) ?? []).sort(
+    (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
+  );
+
+  const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)]">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold capitalize">
+            {format(cursor, "MMMM 'de' yyyy", { locale: ptBR })}
+          </h2>
+          <div className="flex gap-1">
+            <Button variant="outline" size="icon" onClick={() => setCursor(subMonths(cursor, 1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setCursor(new Date()); setSelected(new Date()); }}>
+              Hoje
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => setCursor(addMonths(cursor, 1))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
+          {weekdays.map((w) => <div key={w} className="py-1">{w}</div>)}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((d) => {
+            const key = format(d, "yyyy-MM-dd");
+            const items = byDay.get(key) ?? [];
+            const inMonth = isSameMonth(d, cursor);
+            const isSel = isSameDay(d, selected);
+            const isToday = isSameDay(d, new Date());
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSelected(d)}
+                className={`min-h-20 rounded-lg border p-1.5 text-left transition ${
+                  isSel ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                } ${!inMonth ? "opacity-40" : ""}`}
+              >
+                <div className={`text-xs font-semibold ${isToday ? "text-primary" : ""}`}>
+                  {format(d, "d")}
+                </div>
+                <div className="mt-1 space-y-0.5">
+                  {items.slice(0, 3).map((a) => {
+                    const s = statusStyle[a.status];
+                    return (
+                      <div key={a.id} className={`truncate rounded px-1 py-0.5 text-[10px] ${s.cls}`}>
+                        {format(new Date(a.scheduled_at), "HH:mm")} {a.patient_name}
+                      </div>
+                    );
+                  })}
+                  {items.length > 3 && (
+                    <div className="text-[10px] text-muted-foreground">+{items.length - 3} mais</div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)]">
+        <h3 className="font-display text-base font-semibold capitalize">
+          {format(selected, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          {dayList.length} {dayList.length === 1 ? "agendamento" : "agendamentos"}
+        </p>
+        <div className="mt-3 space-y-2">
+          {dayList.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+              Nenhum agendamento neste dia.
+            </div>
+          ) : (
+            dayList.map((a) => {
+              const s = statusStyle[a.status];
+              const SIcon = s.icon;
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => onEdit(a)}
+                  className="w-full rounded-lg border p-3 text-left hover:bg-muted/40"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold">{format(new Date(a.scheduled_at), "HH:mm")} · {a.patient_name}</div>
+                    <Badge variant="outline" className={s.cls}>
+                      <SIcon className="mr-1 h-3 w-3" />{s.label}
+                    </Badge>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                    <span>{a.type === "retorno" ? "Retorno" : "Consulta"}</span>
+                    {a.category && <span>{a.category}</span>}
+                    {a.plan_name && <span>{a.plan_name}</span>}
+                    <span>{a.phone}</span>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
