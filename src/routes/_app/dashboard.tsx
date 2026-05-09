@@ -438,3 +438,137 @@ function AppointmentDialog({
     </DialogContent>
   );
 }
+
+function CalendarView({ appts, onEdit }: { appts: Appointment[]; onEdit: (a: Appointment) => void }) {
+  const [cursor, setCursor] = useState(new Date());
+  const [selected, setSelected] = useState<Date>(new Date());
+
+  const days = useMemo(() => {
+    const start = startOfWeek(startOfMonth(cursor), { weekStartsOn: 0 });
+    const end = endOfWeek(endOfMonth(cursor), { weekStartsOn: 0 });
+    const arr: Date[] = [];
+    let d = start;
+    while (d <= end) { arr.push(d); d = addDays(d, 1); }
+    return arr;
+  }, [cursor]);
+
+  const byDay = useMemo(() => {
+    const map = new Map<string, Appointment[]>();
+    for (const a of appts) {
+      const k = format(new Date(a.scheduled_at), "yyyy-MM-dd");
+      const arr = map.get(k) ?? [];
+      arr.push(a);
+      map.set(k, arr);
+    }
+    return map;
+  }, [appts]);
+
+  const dayList = (byDay.get(format(selected, "yyyy-MM-dd")) ?? []).sort(
+    (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
+  );
+
+  const weekdays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+      <div className="rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)]">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold capitalize">
+            {format(cursor, "MMMM 'de' yyyy", { locale: ptBR })}
+          </h2>
+          <div className="flex gap-1">
+            <Button variant="outline" size="icon" onClick={() => setCursor(subMonths(cursor, 1))}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setCursor(new Date()); setSelected(new Date()); }}>
+              Hoje
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => setCursor(addMonths(cursor, 1))}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-7 gap-1 text-center text-xs font-medium text-muted-foreground">
+          {weekdays.map((w) => <div key={w} className="py-1">{w}</div>)}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((d) => {
+            const key = format(d, "yyyy-MM-dd");
+            const items = byDay.get(key) ?? [];
+            const inMonth = isSameMonth(d, cursor);
+            const isSel = isSameDay(d, selected);
+            const isToday = isSameDay(d, new Date());
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSelected(d)}
+                className={`min-h-20 rounded-lg border p-1.5 text-left transition ${
+                  isSel ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
+                } ${!inMonth ? "opacity-40" : ""}`}
+              >
+                <div className={`text-xs font-semibold ${isToday ? "text-primary" : ""}`}>
+                  {format(d, "d")}
+                </div>
+                <div className="mt-1 space-y-0.5">
+                  {items.slice(0, 3).map((a) => {
+                    const s = statusStyle[a.status];
+                    return (
+                      <div key={a.id} className={`truncate rounded px-1 py-0.5 text-[10px] ${s.cls}`}>
+                        {format(new Date(a.scheduled_at), "HH:mm")} {a.patient_name}
+                      </div>
+                    );
+                  })}
+                  {items.length > 3 && (
+                    <div className="text-[10px] text-muted-foreground">+{items.length - 3} mais</div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border bg-card p-4 shadow-[var(--shadow-card)]">
+        <h3 className="font-display text-base font-semibold capitalize">
+          {format(selected, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          {dayList.length} {dayList.length === 1 ? "agendamento" : "agendamentos"}
+        </p>
+        <div className="mt-3 space-y-2">
+          {dayList.length === 0 ? (
+            <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+              Nenhum agendamento neste dia.
+            </div>
+          ) : (
+            dayList.map((a) => {
+              const s = statusStyle[a.status];
+              const SIcon = s.icon;
+              return (
+                <button
+                  key={a.id}
+                  onClick={() => onEdit(a)}
+                  className="w-full rounded-lg border p-3 text-left hover:bg-muted/40"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="font-semibold">{format(new Date(a.scheduled_at), "HH:mm")} · {a.patient_name}</div>
+                    <Badge variant="outline" className={s.cls}>
+                      <SIcon className="mr-1 h-3 w-3" />{s.label}
+                    </Badge>
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                    <span>{a.type === "retorno" ? "Retorno" : "Consulta"}</span>
+                    {a.category && <span>{a.category}</span>}
+                    {a.plan_name && <span>{a.plan_name}</span>}
+                    <span>{a.phone}</span>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
