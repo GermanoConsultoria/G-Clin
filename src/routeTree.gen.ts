@@ -12,8 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppSlotsRouteImport } from './routes/_app/slots'
 import { Route as AppPlansRouteImport } from './routes/_app/plans'
+import { Route as AppOverviewRouteImport } from './routes/_app/overview'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -29,9 +32,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppSlotsRoute = AppSlotsRouteImport.update({
+  id: '/slots',
+  path: '/slots',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPlansRoute = AppPlansRouteImport.update({
   id: '/plans',
   path: '/plans',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppOverviewRoute = AppOverviewRouteImport.update({
+  id: '/overview',
+  path: '/overview',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -39,33 +52,70 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppCategoriesRoute = AppCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/categories': typeof AppCategoriesRoute
   '/dashboard': typeof AppDashboardRoute
+  '/overview': typeof AppOverviewRoute
   '/plans': typeof AppPlansRoute
+  '/slots': typeof AppSlotsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/categories': typeof AppCategoriesRoute
   '/dashboard': typeof AppDashboardRoute
+  '/overview': typeof AppOverviewRoute
   '/plans': typeof AppPlansRoute
+  '/slots': typeof AppSlotsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_app/categories': typeof AppCategoriesRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/overview': typeof AppOverviewRoute
   '/_app/plans': typeof AppPlansRoute
+  '/_app/slots': typeof AppSlotsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/dashboard' | '/plans'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/categories'
+    | '/dashboard'
+    | '/overview'
+    | '/plans'
+    | '/slots'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/dashboard' | '/plans'
-  id: '__root__' | '/' | '/_app' | '/auth' | '/_app/dashboard' | '/_app/plans'
+  to:
+    | '/'
+    | '/auth'
+    | '/categories'
+    | '/dashboard'
+    | '/overview'
+    | '/plans'
+    | '/slots'
+  id:
+    | '__root__'
+    | '/'
+    | '/_app'
+    | '/auth'
+    | '/_app/categories'
+    | '/_app/dashboard'
+    | '/_app/overview'
+    | '/_app/plans'
+    | '/_app/slots'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -97,11 +147,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/slots': {
+      id: '/_app/slots'
+      path: '/slots'
+      fullPath: '/slots'
+      preLoaderRoute: typeof AppSlotsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/plans': {
       id: '/_app/plans'
       path: '/plans'
       fullPath: '/plans'
       preLoaderRoute: typeof AppPlansRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/overview': {
+      id: '/_app/overview'
+      path: '/overview'
+      fullPath: '/overview'
+      preLoaderRoute: typeof AppOverviewRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
@@ -111,17 +175,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/categories': {
+      id: '/_app/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof AppCategoriesRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppCategoriesRoute: typeof AppCategoriesRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppOverviewRoute: typeof AppOverviewRoute
   AppPlansRoute: typeof AppPlansRoute
+  AppSlotsRoute: typeof AppSlotsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppCategoriesRoute: AppCategoriesRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppOverviewRoute: AppOverviewRoute,
   AppPlansRoute: AppPlansRoute,
+  AppSlotsRoute: AppSlotsRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
