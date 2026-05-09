@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       appointments: {
         Row: {
+          category: string | null
           created_at: string
           id: string
           notes: string | null
@@ -28,8 +29,10 @@ export type Database = {
           type: Database["public"]["Enums"]["appointment_type"]
           updated_at: string
           user_id: string
+          wants_to_anticipate: boolean
         }
         Insert: {
+          category?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -42,8 +45,10 @@ export type Database = {
           type?: Database["public"]["Enums"]["appointment_type"]
           updated_at?: string
           user_id: string
+          wants_to_anticipate?: boolean
         }
         Update: {
+          category?: string | null
           created_at?: string
           id?: string
           notes?: string | null
@@ -56,6 +61,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["appointment_type"]
           updated_at?: string
           user_id?: string
+          wants_to_anticipate?: boolean
         }
         Relationships: [
           {
@@ -66,6 +72,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       plans: {
         Row: {
