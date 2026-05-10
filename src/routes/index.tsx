@@ -20,7 +20,7 @@ function Landing() {
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-[image:var(--gradient-hero)] text-primary-foreground">
             <Stethoscope className="h-5 w-5" />
           </div>
-          ClinicFlow
+          G-Clin
         </div>
         <Link to="/auth"><Button variant="ghost">Entrar</Button></Link>
       </header>

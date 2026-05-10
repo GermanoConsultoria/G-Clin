@@ -1,9 +1,10 @@
 import { createFileRoute, Outlet, useNavigate, Link, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Stethoscope, LogOut, Calendar, Tag, LayoutDashboard, Search, FolderHeart } from "lucide-react";
+import { Stethoscope, LogOut, Calendar, Tag, LayoutDashboard, Search, FolderHeart, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import gtechLogo from "@/assets/g-tech-logo.png";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
@@ -24,19 +25,20 @@ function AppLayout() {
     { to: "/overview", label: "Painel", icon: LayoutDashboard },
     { to: "/dashboard", label: "Agendamentos", icon: Calendar },
     { to: "/slots", label: "Encontrar horário", icon: Search },
+    { to: "/hours", label: "Horários", icon: Clock },
     { to: "/plans", label: "Planos", icon: Tag },
     { to: "/categories", label: "Categorias", icon: FolderHeart },
   ] as const;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex min-h-screen flex-col bg-background">
       <header className="border-b bg-card/80 backdrop-blur">
         <div className="container mx-auto flex h-16 items-center justify-between px-6">
           <Link to="/overview" className="flex items-center gap-2 font-display font-bold">
             <div className="grid h-8 w-8 place-items-center rounded-lg bg-[image:var(--gradient-hero)] text-primary-foreground">
               <Stethoscope className="h-4 w-4" />
             </div>
-            ClinicFlow
+            G-Clin
           </Link>
           <nav className="flex items-center gap-1">
             {navItems.map((n) => {
@@ -59,7 +61,14 @@ function AppLayout() {
           </nav>
         </div>
       </header>
-      <main className="container mx-auto px-6 py-8"><Outlet /></main>
+      <main className="container mx-auto flex-1 px-6 py-8"><Outlet /></main>
+      <footer className="border-t bg-card/50">
+        <div className="container mx-auto flex flex-col items-center justify-center gap-2 px-6 py-4 text-xs text-muted-foreground sm:flex-row">
+          <span>Desenvolvido por</span>
+          <img src={gtechLogo} alt="G-Tech" className="h-8 w-8 rounded-md" />
+          <span className="font-semibold text-foreground">G-Tech</span>
+        </div>
+      </footer>
     </div>
   );
 }

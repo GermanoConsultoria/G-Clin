@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSlotsRouteImport } from './routes/_app/slots'
 import { Route as AppPlansRouteImport } from './routes/_app/plans'
 import { Route as AppOverviewRouteImport } from './routes/_app/overview'
+import { Route as AppHoursRouteImport } from './routes/_app/hours'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
 
@@ -47,6 +48,11 @@ const AppOverviewRoute = AppOverviewRouteImport.update({
   path: '/overview',
   getParentRoute: () => AppRoute,
 } as any)
+const AppHoursRoute = AppHoursRouteImport.update({
+  id: '/hours',
+  path: '/hours',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/categories': typeof AppCategoriesRoute
   '/dashboard': typeof AppDashboardRoute
+  '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
   '/plans': typeof AppPlansRoute
   '/slots': typeof AppSlotsRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/categories': typeof AppCategoriesRoute
   '/dashboard': typeof AppDashboardRoute
+  '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
   '/plans': typeof AppPlansRoute
   '/slots': typeof AppSlotsRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_app/categories': typeof AppCategoriesRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/hours': typeof AppHoursRoute
   '/_app/overview': typeof AppOverviewRoute
   '/_app/plans': typeof AppPlansRoute
   '/_app/slots': typeof AppSlotsRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/categories'
     | '/dashboard'
+    | '/hours'
     | '/overview'
     | '/plans'
     | '/slots'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/categories'
     | '/dashboard'
+    | '/hours'
     | '/overview'
     | '/plans'
     | '/slots'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_app/categories'
     | '/_app/dashboard'
+    | '/_app/hours'
     | '/_app/overview'
     | '/_app/plans'
     | '/_app/slots'
@@ -168,6 +180,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppOverviewRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/hours': {
+      id: '/_app/hours'
+      path: '/hours'
+      fullPath: '/hours'
+      preLoaderRoute: typeof AppHoursRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -188,6 +207,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppCategoriesRoute: typeof AppCategoriesRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppHoursRoute: typeof AppHoursRoute
   AppOverviewRoute: typeof AppOverviewRoute
   AppPlansRoute: typeof AppPlansRoute
   AppSlotsRoute: typeof AppSlotsRoute
@@ -196,6 +216,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppCategoriesRoute: AppCategoriesRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppHoursRoute: AppHoursRoute,
   AppOverviewRoute: AppOverviewRoute,
   AppPlansRoute: AppPlansRoute,
   AppSlotsRoute: AppSlotsRoute,

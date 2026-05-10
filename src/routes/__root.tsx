@@ -50,8 +50,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ClinicFlow — Gestão de Clínica Médica" },
-      { name: "description", content: "Sistema de agendamentos com integração WhatsApp para clínicas médicas." },
+      { title: "G-Clin — Gestão de Clínica Médica" },
+      { name: "description", content: "G-Clin: sistema de agendamentos com integração WhatsApp para clínicas médicas." },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
