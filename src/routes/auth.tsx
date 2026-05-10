@@ -64,7 +64,7 @@ function AuthPage() {
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-[image:var(--gradient-hero)] text-primary-foreground">
             <Stethoscope className="h-5 w-5" />
           </div>
-          ClinicFlow
+          G-Clin
         </Link>
         <div className="rounded-2xl border bg-card p-6 shadow-[var(--shadow-card)]">
           <Tabs defaultValue="signin">
