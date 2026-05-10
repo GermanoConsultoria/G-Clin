@@ -73,6 +73,45 @@ export type Database = {
           },
         ]
       }
+      business_hours: {
+        Row: {
+          break_end: string | null
+          break_start: string | null
+          close_time: string
+          created_at: string
+          id: string
+          is_open: boolean
+          open_time: string
+          updated_at: string
+          user_id: string
+          weekday: number
+        }
+        Insert: {
+          break_end?: string | null
+          break_start?: string | null
+          close_time?: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          open_time?: string
+          updated_at?: string
+          user_id: string
+          weekday: number
+        }
+        Update: {
+          break_end?: string | null
+          break_start?: string | null
+          close_time?: string
+          created_at?: string
+          id?: string
+          is_open?: boolean
+          open_time?: string
+          updated_at?: string
+          user_id?: string
+          weekday?: number
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           created_at: string
