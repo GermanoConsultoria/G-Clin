@@ -62,11 +62,11 @@ function AppLayout() {
         </div>
       </header>
       <main className="container mx-auto flex-1 px-6 py-8"><Outlet /></main>
-      <footer className="border-t bg-card/50">
-        <div className="container mx-auto flex flex-col items-center justify-center gap-2 px-6 py-4 text-xs text-muted-foreground sm:flex-row">
-          <span>Desenvolvido por</span>
-          <img src={gtechLogo} alt="G-Tech" className="h-8 w-8 rounded-md" />
-          <span className="font-semibold text-foreground">G-Tech</span>
+      <footer className="border-t bg-card">
+        <div className="container mx-auto flex flex-col items-center justify-center gap-3 px-6 py-6 sm:flex-row">
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">Desenvolvido por</span>
+          <img src={gtechLogo} alt="G-Tech — desenvolvedor do sistema" className="h-12 w-12 rounded-lg shadow-[var(--shadow-soft)]" />
+          <span className="font-display text-base font-bold tracking-wide">G-Tech</span>
         </div>
       </footer>
     </div>
