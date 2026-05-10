@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import gtechLogo from "@/assets/g-tech-logo.png";
 
 export const Route = createFileRoute("/auth")({ component: AuthPage });
 
@@ -91,6 +92,12 @@ function AuthPage() {
               </form>
             </TabsContent>
           </Tabs>
+        </div>
+
+        <div className="mt-8 flex flex-col items-center gap-2 rounded-xl border bg-card/60 p-4 text-center shadow-[var(--shadow-card)]">
+          <span className="text-xs uppercase tracking-widest text-muted-foreground">Desenvolvido por</span>
+          <img src={gtechLogo} alt="G-Tech — desenvolvedor do sistema" className="h-16 w-16 rounded-lg shadow-[var(--shadow-soft)]" />
+          <span className="font-display text-base font-bold tracking-wide">G-Tech</span>
         </div>
       </div>
     </div>
