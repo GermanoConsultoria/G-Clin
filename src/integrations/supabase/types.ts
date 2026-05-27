@@ -133,6 +133,97 @@ export type Database = {
         }
         Relationships: []
       }
+      chart_accounts: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["account_kind"]
+          name: string
+          parent_id: string | null
+          user_id: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["account_kind"]
+          name: string
+          parent_id?: string | null
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["account_kind"]
+          name?: string
+          parent_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chart_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payables: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          description: string
+          due_date: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          status: Database["public"]["Enums"]["finance_status"]
+          supplier: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string
+          description: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          status?: Database["public"]["Enums"]["finance_status"]
+          supplier?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          description?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          status?: Database["public"]["Enums"]["finance_status"]
+          supplier?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payables_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           created_at: string
@@ -154,6 +245,108 @@ export type Database = {
         }
         Relationships: []
       }
+      receivables: {
+        Row: {
+          account_id: string | null
+          amount: number
+          created_at: string
+          description: string
+          due_date: string
+          id: string
+          notes: string | null
+          patient_name: string | null
+          received_at: string | null
+          service_id: string | null
+          status: Database["public"]["Enums"]["finance_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          created_at?: string
+          description: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          patient_name?: string | null
+          received_at?: string | null
+          service_id?: string | null
+          status?: Database["public"]["Enums"]["finance_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          created_at?: string
+          description?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          patient_name?: string | null
+          received_at?: string | null
+          service_id?: string | null
+          status?: Database["public"]["Enums"]["finance_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receivables_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receivables_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          active: boolean
+          cost: number
+          created_at: string
+          description: string | null
+          duration_minutes: number
+          id: string
+          name: string
+          price: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          cost?: number
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          name: string
+          price?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          cost?: number
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          name?: string
+          price?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -162,8 +355,10 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      account_kind: "receita" | "despesa"
       appointment_status: "agendado" | "confirmado" | "concluido" | "cancelado"
       appointment_type: "consulta" | "retorno"
+      finance_status: "pendente" | "pago" | "atrasado" | "cancelado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -291,8 +486,10 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_kind: ["receita", "despesa"],
       appointment_status: ["agendado", "confirmado", "concluido", "cancelado"],
       appointment_type: ["consulta", "retorno"],
+      finance_status: ["pendente", "pago", "atrasado", "cancelado"],
     },
   },
 } as const
