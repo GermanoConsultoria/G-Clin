@@ -13,11 +13,16 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSlotsRouteImport } from './routes/_app/slots'
+import { Route as AppServicesRouteImport } from './routes/_app/services'
+import { Route as AppReceivablesRouteImport } from './routes/_app/receivables'
 import { Route as AppPlansRouteImport } from './routes/_app/plans'
+import { Route as AppPayablesRouteImport } from './routes/_app/payables'
 import { Route as AppOverviewRouteImport } from './routes/_app/overview'
 import { Route as AppHoursRouteImport } from './routes/_app/hours'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppChartAccountsRouteImport } from './routes/_app/chart-accounts'
 import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
+import { Route as AppBalanceRouteImport } from './routes/_app/balance'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -38,9 +43,24 @@ const AppSlotsRoute = AppSlotsRouteImport.update({
   path: '/slots',
   getParentRoute: () => AppRoute,
 } as any)
+const AppServicesRoute = AppServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReceivablesRoute = AppReceivablesRouteImport.update({
+  id: '/receivables',
+  path: '/receivables',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPlansRoute = AppPlansRouteImport.update({
   id: '/plans',
   path: '/plans',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPayablesRoute = AppPayablesRouteImport.update({
+  id: '/payables',
+  path: '/payables',
   getParentRoute: () => AppRoute,
 } as any)
 const AppOverviewRoute = AppOverviewRouteImport.update({
@@ -58,30 +78,50 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppChartAccountsRoute = AppChartAccountsRouteImport.update({
+  id: '/chart-accounts',
+  path: '/chart-accounts',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCategoriesRoute = AppCategoriesRouteImport.update({
   id: '/categories',
   path: '/categories',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBalanceRoute = AppBalanceRouteImport.update({
+  id: '/balance',
+  path: '/balance',
   getParentRoute: () => AppRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/balance': typeof AppBalanceRoute
   '/categories': typeof AppCategoriesRoute
+  '/chart-accounts': typeof AppChartAccountsRoute
   '/dashboard': typeof AppDashboardRoute
   '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
+  '/payables': typeof AppPayablesRoute
   '/plans': typeof AppPlansRoute
+  '/receivables': typeof AppReceivablesRoute
+  '/services': typeof AppServicesRoute
   '/slots': typeof AppSlotsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/balance': typeof AppBalanceRoute
   '/categories': typeof AppCategoriesRoute
+  '/chart-accounts': typeof AppChartAccountsRoute
   '/dashboard': typeof AppDashboardRoute
   '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
+  '/payables': typeof AppPayablesRoute
   '/plans': typeof AppPlansRoute
+  '/receivables': typeof AppReceivablesRoute
+  '/services': typeof AppServicesRoute
   '/slots': typeof AppSlotsRoute
 }
 export interface FileRoutesById {
@@ -89,11 +129,16 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_app/balance': typeof AppBalanceRoute
   '/_app/categories': typeof AppCategoriesRoute
+  '/_app/chart-accounts': typeof AppChartAccountsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/hours': typeof AppHoursRoute
   '/_app/overview': typeof AppOverviewRoute
+  '/_app/payables': typeof AppPayablesRoute
   '/_app/plans': typeof AppPlansRoute
+  '/_app/receivables': typeof AppReceivablesRoute
+  '/_app/services': typeof AppServicesRoute
   '/_app/slots': typeof AppSlotsRoute
 }
 export interface FileRouteTypes {
@@ -101,32 +146,47 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/balance'
     | '/categories'
+    | '/chart-accounts'
     | '/dashboard'
     | '/hours'
     | '/overview'
+    | '/payables'
     | '/plans'
+    | '/receivables'
+    | '/services'
     | '/slots'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
+    | '/balance'
     | '/categories'
+    | '/chart-accounts'
     | '/dashboard'
     | '/hours'
     | '/overview'
+    | '/payables'
     | '/plans'
+    | '/receivables'
+    | '/services'
     | '/slots'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/auth'
+    | '/_app/balance'
     | '/_app/categories'
+    | '/_app/chart-accounts'
     | '/_app/dashboard'
     | '/_app/hours'
     | '/_app/overview'
+    | '/_app/payables'
     | '/_app/plans'
+    | '/_app/receivables'
+    | '/_app/services'
     | '/_app/slots'
   fileRoutesById: FileRoutesById
 }
@@ -166,11 +226,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSlotsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/services': {
+      id: '/_app/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof AppServicesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/receivables': {
+      id: '/_app/receivables'
+      path: '/receivables'
+      fullPath: '/receivables'
+      preLoaderRoute: typeof AppReceivablesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/plans': {
       id: '/_app/plans'
       path: '/plans'
       fullPath: '/plans'
       preLoaderRoute: typeof AppPlansRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/payables': {
+      id: '/_app/payables'
+      path: '/payables'
+      fullPath: '/payables'
+      preLoaderRoute: typeof AppPayablesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/overview': {
@@ -194,6 +275,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/chart-accounts': {
+      id: '/_app/chart-accounts'
+      path: '/chart-accounts'
+      fullPath: '/chart-accounts'
+      preLoaderRoute: typeof AppChartAccountsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/categories': {
       id: '/_app/categories'
       path: '/categories'
@@ -201,24 +289,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCategoriesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/balance': {
+      id: '/_app/balance'
+      path: '/balance'
+      fullPath: '/balance'
+      preLoaderRoute: typeof AppBalanceRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppBalanceRoute: typeof AppBalanceRoute
   AppCategoriesRoute: typeof AppCategoriesRoute
+  AppChartAccountsRoute: typeof AppChartAccountsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppHoursRoute: typeof AppHoursRoute
   AppOverviewRoute: typeof AppOverviewRoute
+  AppPayablesRoute: typeof AppPayablesRoute
   AppPlansRoute: typeof AppPlansRoute
+  AppReceivablesRoute: typeof AppReceivablesRoute
+  AppServicesRoute: typeof AppServicesRoute
   AppSlotsRoute: typeof AppSlotsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppBalanceRoute: AppBalanceRoute,
   AppCategoriesRoute: AppCategoriesRoute,
+  AppChartAccountsRoute: AppChartAccountsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppHoursRoute: AppHoursRoute,
   AppOverviewRoute: AppOverviewRoute,
+  AppPayablesRoute: AppPayablesRoute,
   AppPlansRoute: AppPlansRoute,
+  AppReceivablesRoute: AppReceivablesRoute,
+  AppServicesRoute: AppServicesRoute,
   AppSlotsRoute: AppSlotsRoute,
 }
 

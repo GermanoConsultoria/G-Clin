@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useNavigate, Link, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Stethoscope, LogOut, Calendar, Tag, LayoutDashboard, Search, FolderHeart, Clock } from "lucide-react";
+import { Stethoscope, LogOut, Calendar, Tag, LayoutDashboard, Search, FolderHeart, Clock, Briefcase, BookOpen, TrendingUp, TrendingDown, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,9 +24,14 @@ function AppLayout() {
   const navItems = [
     { to: "/overview", label: "Painel", icon: LayoutDashboard },
     { to: "/dashboard", label: "Agendamentos", icon: Calendar },
-    { to: "/slots", label: "Encontrar horário", icon: Search },
-    { to: "/hours", label: "Horários", icon: Clock },
-    { to: "/plans", label: "Planos", icon: Tag },
+    { to: "/slots", label: "Horários livres", icon: Search },
+    { to: "/hours", label: "Funcionamento", icon: Clock },
+    { to: "/services", label: "Serviços", icon: Briefcase },
+    { to: "/receivables", label: "A receber", icon: TrendingUp },
+    { to: "/payables", label: "A pagar", icon: TrendingDown },
+    { to: "/balance", label: "Balancete", icon: Scale },
+    { to: "/chart-accounts", label: "Plano de contas", icon: BookOpen },
+    { to: "/plans", label: "Convênios", icon: Tag },
     { to: "/categories", label: "Categorias", icon: FolderHeart },
   ] as const;
 
