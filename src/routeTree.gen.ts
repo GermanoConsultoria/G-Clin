@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSlotsRouteImport } from './routes/_app/slots'
+import { Route as AppServicesRouteImport } from './routes/_app/services'
 import { Route as AppPlansRouteImport } from './routes/_app/plans'
 import { Route as AppOverviewRouteImport } from './routes/_app/overview'
 import { Route as AppHoursRouteImport } from './routes/_app/hours'
@@ -36,6 +37,11 @@ const IndexRoute = IndexRouteImport.update({
 const AppSlotsRoute = AppSlotsRouteImport.update({
   id: '/slots',
   path: '/slots',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppServicesRoute = AppServicesRouteImport.update({
+  id: '/services',
+  path: '/services',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPlansRoute = AppPlansRouteImport.update({
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
   '/plans': typeof AppPlansRoute
+  '/services': typeof AppServicesRoute
   '/slots': typeof AppSlotsRoute
 }
 export interface FileRoutesByTo {
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
   '/plans': typeof AppPlansRoute
+  '/services': typeof AppServicesRoute
   '/slots': typeof AppSlotsRoute
 }
 export interface FileRoutesById {
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/_app/hours': typeof AppHoursRoute
   '/_app/overview': typeof AppOverviewRoute
   '/_app/plans': typeof AppPlansRoute
+  '/_app/services': typeof AppServicesRoute
   '/_app/slots': typeof AppSlotsRoute
 }
 export interface FileRouteTypes {
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/hours'
     | '/overview'
     | '/plans'
+    | '/services'
     | '/slots'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/hours'
     | '/overview'
     | '/plans'
+    | '/services'
     | '/slots'
   id:
     | '__root__'
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/_app/hours'
     | '/_app/overview'
     | '/_app/plans'
+    | '/_app/services'
     | '/_app/slots'
   fileRoutesById: FileRoutesById
 }
@@ -164,6 +176,13 @@ declare module '@tanstack/react-router' {
       path: '/slots'
       fullPath: '/slots'
       preLoaderRoute: typeof AppSlotsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/services': {
+      id: '/_app/services'
+      path: '/services'
+      fullPath: '/services'
+      preLoaderRoute: typeof AppServicesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/plans': {
@@ -210,6 +229,7 @@ interface AppRouteChildren {
   AppHoursRoute: typeof AppHoursRoute
   AppOverviewRoute: typeof AppOverviewRoute
   AppPlansRoute: typeof AppPlansRoute
+  AppServicesRoute: typeof AppServicesRoute
   AppSlotsRoute: typeof AppSlotsRoute
 }
 
@@ -219,6 +239,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppHoursRoute: AppHoursRoute,
   AppOverviewRoute: AppOverviewRoute,
   AppPlansRoute: AppPlansRoute,
+  AppServicesRoute: AppServicesRoute,
   AppSlotsRoute: AppSlotsRoute,
 }
 
@@ -232,3 +253,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
