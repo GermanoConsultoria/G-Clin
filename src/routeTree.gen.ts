@@ -18,6 +18,7 @@ import { Route as AppPlansRouteImport } from './routes/_app/plans'
 import { Route as AppOverviewRouteImport } from './routes/_app/overview'
 import { Route as AppHoursRouteImport } from './routes/_app/hours'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppChartAccountsRouteImport } from './routes/_app/chart-accounts'
 import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
 
 const AuthRoute = AuthRouteImport.update({
@@ -64,6 +65,11 @@ const AppDashboardRoute = AppDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AppRoute,
 } as any)
+const AppChartAccountsRoute = AppChartAccountsRouteImport.update({
+  id: '/chart-accounts',
+  path: '/chart-accounts',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppCategoriesRoute = AppCategoriesRouteImport.update({
   id: '/categories',
   path: '/categories',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/categories': typeof AppCategoriesRoute
+  '/chart-accounts': typeof AppChartAccountsRoute
   '/dashboard': typeof AppDashboardRoute
   '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/categories': typeof AppCategoriesRoute
+  '/chart-accounts': typeof AppChartAccountsRoute
   '/dashboard': typeof AppDashboardRoute
   '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
@@ -98,6 +106,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/_app/categories': typeof AppCategoriesRoute
+  '/_app/chart-accounts': typeof AppChartAccountsRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/hours': typeof AppHoursRoute
   '/_app/overview': typeof AppOverviewRoute
@@ -111,6 +120,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/categories'
+    | '/chart-accounts'
     | '/dashboard'
     | '/hours'
     | '/overview'
@@ -122,6 +132,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/categories'
+    | '/chart-accounts'
     | '/dashboard'
     | '/hours'
     | '/overview'
@@ -134,6 +145,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/auth'
     | '/_app/categories'
+    | '/_app/chart-accounts'
     | '/_app/dashboard'
     | '/_app/hours'
     | '/_app/overview'
@@ -213,6 +225,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDashboardRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/chart-accounts': {
+      id: '/_app/chart-accounts'
+      path: '/chart-accounts'
+      fullPath: '/chart-accounts'
+      preLoaderRoute: typeof AppChartAccountsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/categories': {
       id: '/_app/categories'
       path: '/categories'
@@ -225,6 +244,7 @@ declare module '@tanstack/react-router' {
 
 interface AppRouteChildren {
   AppCategoriesRoute: typeof AppCategoriesRoute
+  AppChartAccountsRoute: typeof AppChartAccountsRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppHoursRoute: typeof AppHoursRoute
   AppOverviewRoute: typeof AppOverviewRoute
@@ -235,6 +255,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppCategoriesRoute: AppCategoriesRoute,
+  AppChartAccountsRoute: AppChartAccountsRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppHoursRoute: AppHoursRoute,
   AppOverviewRoute: AppOverviewRoute,
