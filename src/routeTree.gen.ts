@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSlotsRouteImport } from './routes/_app/slots'
 import { Route as AppServicesRouteImport } from './routes/_app/services'
+import { Route as AppReceivablesRouteImport } from './routes/_app/receivables'
 import { Route as AppPlansRouteImport } from './routes/_app/plans'
 import { Route as AppPayablesRouteImport } from './routes/_app/payables'
 import { Route as AppOverviewRouteImport } from './routes/_app/overview'
@@ -44,6 +45,11 @@ const AppSlotsRoute = AppSlotsRouteImport.update({
 const AppServicesRoute = AppServicesRouteImport.update({
   id: '/services',
   path: '/services',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReceivablesRoute = AppReceivablesRouteImport.update({
+  id: '/receivables',
+  path: '/receivables',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPlansRoute = AppPlansRouteImport.update({
@@ -92,6 +98,7 @@ export interface FileRoutesByFullPath {
   '/overview': typeof AppOverviewRoute
   '/payables': typeof AppPayablesRoute
   '/plans': typeof AppPlansRoute
+  '/receivables': typeof AppReceivablesRoute
   '/services': typeof AppServicesRoute
   '/slots': typeof AppSlotsRoute
 }
@@ -105,6 +112,7 @@ export interface FileRoutesByTo {
   '/overview': typeof AppOverviewRoute
   '/payables': typeof AppPayablesRoute
   '/plans': typeof AppPlansRoute
+  '/receivables': typeof AppReceivablesRoute
   '/services': typeof AppServicesRoute
   '/slots': typeof AppSlotsRoute
 }
@@ -120,6 +128,7 @@ export interface FileRoutesById {
   '/_app/overview': typeof AppOverviewRoute
   '/_app/payables': typeof AppPayablesRoute
   '/_app/plans': typeof AppPlansRoute
+  '/_app/receivables': typeof AppReceivablesRoute
   '/_app/services': typeof AppServicesRoute
   '/_app/slots': typeof AppSlotsRoute
 }
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/overview'
     | '/payables'
     | '/plans'
+    | '/receivables'
     | '/services'
     | '/slots'
   fileRoutesByTo: FileRoutesByTo
@@ -148,6 +158,7 @@ export interface FileRouteTypes {
     | '/overview'
     | '/payables'
     | '/plans'
+    | '/receivables'
     | '/services'
     | '/slots'
   id:
@@ -162,6 +173,7 @@ export interface FileRouteTypes {
     | '/_app/overview'
     | '/_app/payables'
     | '/_app/plans'
+    | '/_app/receivables'
     | '/_app/services'
     | '/_app/slots'
   fileRoutesById: FileRoutesById
@@ -207,6 +219,13 @@ declare module '@tanstack/react-router' {
       path: '/services'
       fullPath: '/services'
       preLoaderRoute: typeof AppServicesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/receivables': {
+      id: '/_app/receivables'
+      path: '/receivables'
+      fullPath: '/receivables'
+      preLoaderRoute: typeof AppReceivablesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/plans': {
@@ -269,6 +288,7 @@ interface AppRouteChildren {
   AppOverviewRoute: typeof AppOverviewRoute
   AppPayablesRoute: typeof AppPayablesRoute
   AppPlansRoute: typeof AppPlansRoute
+  AppReceivablesRoute: typeof AppReceivablesRoute
   AppServicesRoute: typeof AppServicesRoute
   AppSlotsRoute: typeof AppSlotsRoute
 }
@@ -281,6 +301,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppOverviewRoute: AppOverviewRoute,
   AppPayablesRoute: AppPayablesRoute,
   AppPlansRoute: AppPlansRoute,
+  AppReceivablesRoute: AppReceivablesRoute,
   AppServicesRoute: AppServicesRoute,
   AppSlotsRoute: AppSlotsRoute,
 }
