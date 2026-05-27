@@ -22,6 +22,7 @@ import { Route as AppHoursRouteImport } from './routes/_app/hours'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppChartAccountsRouteImport } from './routes/_app/chart-accounts'
 import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
+import { Route as AppBalanceRouteImport } from './routes/_app/balance'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -87,10 +88,16 @@ const AppCategoriesRoute = AppCategoriesRouteImport.update({
   path: '/categories',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBalanceRoute = AppBalanceRouteImport.update({
+  id: '/balance',
+  path: '/balance',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/balance': typeof AppBalanceRoute
   '/categories': typeof AppCategoriesRoute
   '/chart-accounts': typeof AppChartAccountsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -105,6 +112,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/balance': typeof AppBalanceRoute
   '/categories': typeof AppCategoriesRoute
   '/chart-accounts': typeof AppChartAccountsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_app/balance': typeof AppBalanceRoute
   '/_app/categories': typeof AppCategoriesRoute
   '/_app/chart-accounts': typeof AppChartAccountsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/balance'
     | '/categories'
     | '/chart-accounts'
     | '/dashboard'
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/balance'
     | '/categories'
     | '/chart-accounts'
     | '/dashboard'
@@ -166,6 +177,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/auth'
+    | '/_app/balance'
     | '/_app/categories'
     | '/_app/chart-accounts'
     | '/_app/dashboard'
@@ -277,10 +289,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCategoriesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/balance': {
+      id: '/_app/balance'
+      path: '/balance'
+      fullPath: '/balance'
+      preLoaderRoute: typeof AppBalanceRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppBalanceRoute: typeof AppBalanceRoute
   AppCategoriesRoute: typeof AppCategoriesRoute
   AppChartAccountsRoute: typeof AppChartAccountsRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -294,6 +314,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppBalanceRoute: AppBalanceRoute,
   AppCategoriesRoute: AppCategoriesRoute,
   AppChartAccountsRoute: AppChartAccountsRoute,
   AppDashboardRoute: AppDashboardRoute,

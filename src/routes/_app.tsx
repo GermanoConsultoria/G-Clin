@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useNavigate, Link, useLocation } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { Stethoscope, LogOut, Calendar, Tag, LayoutDashboard, Search, FolderHeart, Clock } from "lucide-react";
+import { Stethoscope, LogOut, Calendar, Tag, LayoutDashboard, Search, FolderHeart, Clock, Briefcase, BookOpen, TrendingUp, TrendingDown, Scale } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
