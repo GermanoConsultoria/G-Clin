@@ -23,6 +23,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppChartAccountsRouteImport } from './routes/_app/chart-accounts'
 import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
 import { Route as AppBalanceRouteImport } from './routes/_app/balance'
+import { Route as AppConfigUsuariosRouteImport } from './routes/_app/config.usuarios'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -93,6 +94,11 @@ const AppBalanceRoute = AppBalanceRouteImport.update({
   path: '/balance',
   getParentRoute: () => AppRoute,
 } as any)
+const AppConfigUsuariosRoute = AppConfigUsuariosRouteImport.update({
+  id: '/config/usuarios',
+  path: '/config/usuarios',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -108,6 +114,7 @@ export interface FileRoutesByFullPath {
   '/receivables': typeof AppReceivablesRoute
   '/services': typeof AppServicesRoute
   '/slots': typeof AppSlotsRoute
+  '/config/usuarios': typeof AppConfigUsuariosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/receivables': typeof AppReceivablesRoute
   '/services': typeof AppServicesRoute
   '/slots': typeof AppSlotsRoute
+  '/config/usuarios': typeof AppConfigUsuariosRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/_app/receivables': typeof AppReceivablesRoute
   '/_app/services': typeof AppServicesRoute
   '/_app/slots': typeof AppSlotsRoute
+  '/_app/config/usuarios': typeof AppConfigUsuariosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -157,6 +166,7 @@ export interface FileRouteTypes {
     | '/receivables'
     | '/services'
     | '/slots'
+    | '/config/usuarios'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/receivables'
     | '/services'
     | '/slots'
+    | '/config/usuarios'
   id:
     | '__root__'
     | '/'
@@ -188,6 +199,7 @@ export interface FileRouteTypes {
     | '/_app/receivables'
     | '/_app/services'
     | '/_app/slots'
+    | '/_app/config/usuarios'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -296,6 +308,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBalanceRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/config/usuarios': {
+      id: '/_app/config/usuarios'
+      path: '/config/usuarios'
+      fullPath: '/config/usuarios'
+      preLoaderRoute: typeof AppConfigUsuariosRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -311,6 +330,7 @@ interface AppRouteChildren {
   AppReceivablesRoute: typeof AppReceivablesRoute
   AppServicesRoute: typeof AppServicesRoute
   AppSlotsRoute: typeof AppSlotsRoute
+  AppConfigUsuariosRoute: typeof AppConfigUsuariosRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -325,6 +345,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppReceivablesRoute: AppReceivablesRoute,
   AppServicesRoute: AppServicesRoute,
   AppSlotsRoute: AppSlotsRoute,
+  AppConfigUsuariosRoute: AppConfigUsuariosRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -337,3 +358,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

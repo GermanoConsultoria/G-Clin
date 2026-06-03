@@ -1,17 +1,71 @@
 import { createFileRoute, Outlet, useNavigate, Link, useLocation } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { Stethoscope, LogOut, Calendar, Tag, LayoutDashboard, Search, FolderHeart, Clock, Briefcase, BookOpen, TrendingUp, TrendingDown, Scale } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
+import {
+  LogOut, Calendar, Home, Search, Clock, Briefcase, 
+  TrendingUp, TrendingDown, Scale, BookOpen, 
+  Settings, Users, Menu, X, Tag, FolderHeart
+} from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import gtechLogo from "@/assets/g-tech-logo.png";
+import logoGabriela from "@/assets/logo_gabriela.jpeg";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
+
+const mainNavItems = [
+  { to: "/overview",  label: "Painel",          icon: Home },
+  { to: "/dashboard", label: "Agendamentos",    icon: Calendar },
+  { to: "/slots",     label: "Horários livres", icon: Search },
+  { to: "/hours",     label: "Funcionamento",   icon: Clock },
+  { to: "/services",  label: "Serviços",        icon: Briefcase },
+] as const;
+
+const financeItems = [
+  { to: "/receivables",    label: "A receber",       icon: TrendingUp },
+  { to: "/payables",       label: "A pagar",         icon: TrendingDown },
+  { to: "/balance",        label: "Balancete",       icon: Scale },
+  { to: "/chart-accounts", label: "Plano de contas", icon: BookOpen },
+] as const;
+
+const configItems = [
+  { to: "/config/usuarios",  label: "Usuários",   icon: Users },
+  { to: "/plans",            label: "Convênios",  icon: Tag },
+  { to: "/categories",       label: "Categorias", icon: FolderHeart },
+] as const;
+
+// Componente auxiliar para renderizar os links de forma padronizada
+function NavItem({ 
+  item, pathname, isCollapsed, setMobileOpen 
+}: { 
+  item: { to: string; label: string; icon: React.ElementType }; 
+  pathname: string; 
+  isCollapsed: boolean; 
+  setMobileOpen: (v: boolean) => void;
+}) {
+  const active = pathname.startsWith(item.to);
+  
+  return (
+    <Link
+      to={item.to}
+      title={isCollapsed ? item.label : undefined}
+      onClick={() => setMobileOpen(false)}
+      className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
+        isCollapsed ? "justify-center" : "justify-start gap-3"
+      } ${active ? "bg-[#C8A56A]/10 text-[#C8A56A]" : "text-gray-700 hover:bg-black/5"}`}
+    >
+      <item.icon className={`h-6 w-6 shrink-0 ${active ? "text-[#C8A56A]" : "text-[#A87C3F]"}`} />
+      {!isCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
+    </Link>
+  );
+}
 
 function AppLayout() {
   const { user, loading } = useAuth();
   const nav = useNavigate();
   const { pathname } = useLocation();
+  
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/auth" });
@@ -21,59 +75,135 @@ function AppLayout() {
     return <div className="grid min-h-screen place-items-center text-muted-foreground">Carregando...</div>;
   }
 
-  const navItems = [
-    { to: "/overview", label: "Painel", icon: LayoutDashboard },
-    { to: "/dashboard", label: "Agendamentos", icon: Calendar },
-    { to: "/slots", label: "Horários livres", icon: Search },
-    { to: "/hours", label: "Funcionamento", icon: Clock },
-    { to: "/services", label: "Serviços", icon: Briefcase },
-    { to: "/receivables", label: "A receber", icon: TrendingUp },
-    { to: "/payables", label: "A pagar", icon: TrendingDown },
-    { to: "/balance", label: "Balancete", icon: Scale },
-    { to: "/chart-accounts", label: "Plano de contas", icon: BookOpen },
-    { to: "/plans", label: "Convênios", icon: Tag },
-    { to: "/categories", label: "Categorias", icon: FolderHeart },
-  ] as const;
-
   return (
-    <div className="flex min-h-screen flex-col bg-background">
-      <header className="border-b bg-card/80 backdrop-blur">
-        <div className="container mx-auto flex h-16 items-center justify-between px-6">
-          <Link to="/overview" className="flex items-center gap-2 font-display font-bold">
-            <div className="grid h-8 w-8 place-items-center rounded-lg bg-[image:var(--gradient-hero)] text-primary-foreground">
-              <Stethoscope className="h-4 w-4" />
+    <div className="flex min-h-screen bg-gray-50 font-sans overflow-hidden">
+      
+      {/* Overlay Mobile */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden transition-opacity"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#FAF6F1] shadow-xl transition-all duration-300 ease-in-out lg:static
+          ${mobileOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0"}
+          ${isCollapsed ? "lg:w-20" : "lg:w-72"}
+        `}
+      >
+        {/* Cabeçalho da Sidebar (Logo & Hamburger) */}
+        <div className="flex h-20 items-center justify-between px-4 border-b border-[#C8A56A]/10">
+          <div className={`flex items-center gap-3 overflow-hidden transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 hidden lg:flex" : "opacity-100 w-auto"}`}>
+            <img
+              src={logoGabriela}
+              alt="Dra. Gabriela"
+              className="h-10 w-10 shrink-0 rounded-full border border-[#C8A56A] object-cover"
+            />
+            <div className="flex flex-col">
+              <span className="font-display text-sm font-bold text-[#A87C3F] whitespace-nowrap">Dra. Gabriela</span>
             </div>
-            G-Clin
-          </Link>
-          <nav className="flex items-center gap-1">
-            {navItems.map((n) => {
-              const active = pathname.startsWith(n.to);
-              return (
-                <Link
-                  key={n.to}
-                  to={n.to}
-                  className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                    active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <n.icon className="h-4 w-4" /> <span className="hidden md:inline">{n.label}</span>
-                </Link>
-              );
-            })}
-            <Button variant="ghost" size="sm" onClick={() => supabase.auth.signOut().then(() => nav({ to: "/" }))}>
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </nav>
+          </div>
+          
+          {/* Botão Hamburger Desktop */}
+          <button
+            className="hidden lg:flex p-2 rounded-md text-[#A87C3F] hover:bg-black/5 transition-colors mx-auto"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+
+          {/* Botão Fechar Mobile */}
+          <button
+            className="lg:hidden text-gray-400 hover:text-gray-600 p-2"
+            onClick={() => setMobileOpen(false)}
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
-      </header>
-      <main className="container mx-auto flex-1 px-6 py-8"><Outlet /></main>
-      <footer className="border-t bg-card">
-        <div className="container mx-auto flex flex-col items-center justify-center gap-3 px-6 py-6 sm:flex-row">
-          <span className="text-xs uppercase tracking-widest text-muted-foreground">Desenvolvido por</span>
-          <img src={gtechLogo} alt="G-Tech — desenvolvedor do sistema" className="h-12 w-12 rounded-lg shadow-[var(--shadow-soft)]" />
-          <span className="font-display text-base font-bold tracking-wide">G-Tech</span>
+
+        {/* Navegação */}
+        <nav className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-3 py-6 flex flex-col gap-2">
+          
+          {/* Menu Principal */}
+          {mainNavItems.map((item) => (
+            <NavItem 
+              key={item.to} 
+              item={item} 
+              pathname={pathname} 
+              isCollapsed={isCollapsed} 
+              setMobileOpen={setMobileOpen} 
+            />
+          ))}
+
+          <div className="my-2 border-t border-[#C8A56A]/20" />
+
+          {/* Módulo Financeiro */}
+          {!isCollapsed && <span className="px-4 text-xs font-bold text-[#A87C3F]/60 uppercase tracking-wider mt-2 mb-1">Finanças</span>}
+          {financeItems.map((item) => (
+            <NavItem 
+              key={item.to} 
+              item={item} 
+              pathname={pathname} 
+              isCollapsed={isCollapsed} 
+              setMobileOpen={setMobileOpen} 
+            />
+          ))}
+
+          <div className="my-2 border-t border-[#C8A56A]/20" />
+
+          {/* Módulo Sistema */}
+          {!isCollapsed && <span className="px-4 text-xs font-bold text-[#A87C3F]/60 uppercase tracking-wider mt-2 mb-1">Sistema</span>}
+          {configItems.map((item) => (
+            <NavItem 
+              key={item.to} 
+              item={item} 
+              pathname={pathname} 
+              isCollapsed={isCollapsed} 
+              setMobileOpen={setMobileOpen} 
+            />
+          ))}
+
+        </nav>
+
+        {/* Rodapé da Sidebar (Botão de Sair) */}
+        <div className="border-t border-[#C8A56A]/20 p-3">
+          <button
+            onClick={() => supabase.auth.signOut().then(() => nav({ to: "/" }))}
+            title={isCollapsed ? "Sair" : undefined}
+            className={`flex w-full items-center rounded-lg px-4 py-3 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700 ${
+              isCollapsed ? "justify-center" : "justify-start gap-3"
+            }`}
+          >
+            <LogOut className="h-6 w-6 shrink-0 text-red-500" />
+            {!isCollapsed && <span>Sair</span>}
+          </button>
         </div>
-      </footer>
+      </aside>
+
+      {/* Área Principal */}
+      <div className="flex flex-1 flex-col overflow-hidden h-screen">
+        
+        {/* Header Mobile (Aparece apenas se a sidebar estiver oculta no Mobile) */}
+        <header className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden shadow-sm">
+          <div className="flex items-center gap-3 font-display font-bold text-[#A87C3F]">
+             <img src={logoGabriela} alt="Dra. Gabriela" className="h-9 w-9 rounded-full border border-[#C8A56A] object-cover" />
+             Dra. Gabriela
+          </div>
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="rounded-md p-2 text-[#A87C3F] hover:bg-gray-100 transition-colors"
+          >
+            <Menu className="h-6 w-6" />
+          </button>
+        </header>
+
+        {/* Conteúdo Renderizado (Rotas) */}
+        <main className="flex-1 overflow-auto bg-[#FBFBFA] p-6 lg:p-10 relative">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

@@ -14,17 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      anexo_financeiro: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          lancamento_id: string
+          nome: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lancamento_id: string
+          nome: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          lancamento_id?: string
+          nome?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anexo_financeiro_lancamento_id_fkey"
+            columns: ["lancamento_id"]
+            isOneToOne: false
+            referencedRelation: "lancamento_financeiro"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           category: string | null
+          client_name: string
           created_at: string
+          extra_charge: boolean
           id: string
           notes: string | null
-          patient_name: string
           phone: string
-          plan_id: string | null
-          plan_name: string | null
           scheduled_at: string
+          service_id: string | null
+          service_name: string | null
           status: Database["public"]["Enums"]["appointment_status"]
           type: Database["public"]["Enums"]["appointment_type"]
           updated_at: string
@@ -33,14 +69,15 @@ export type Database = {
         }
         Insert: {
           category?: string | null
+          client_name: string
           created_at?: string
+          extra_charge?: boolean
           id?: string
           notes?: string | null
-          patient_name: string
           phone: string
-          plan_id?: string | null
-          plan_name?: string | null
           scheduled_at: string
+          service_id?: string | null
+          service_name?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
           type?: Database["public"]["Enums"]["appointment_type"]
           updated_at?: string
@@ -49,14 +86,15 @@ export type Database = {
         }
         Update: {
           category?: string | null
+          client_name?: string
           created_at?: string
+          extra_charge?: boolean
           id?: string
           notes?: string | null
-          patient_name?: string
           phone?: string
-          plan_id?: string | null
-          plan_name?: string | null
           scheduled_at?: string
+          service_id?: string | null
+          service_name?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
           type?: Database["public"]["Enums"]["appointment_type"]
           updated_at?: string
@@ -65,10 +103,10 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "appointments_plan_id_fkey"
-            columns: ["plan_id"]
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
             isOneToOne: false
-            referencedRelation: "plans"
+            referencedRelation: "services"
             referencedColumns: ["id"]
           },
         ]
@@ -171,6 +209,138 @@ export type Database = {
           },
         ]
       }
+      clinic_settings: {
+        Row: {
+          clinic_name: string
+          closing_hour: string
+          created_at: string
+          evaluation_fee: number
+          evaluation_free_campaign: boolean
+          id: string
+          late_cancellation_fee: boolean
+          no_children_message: boolean
+          no_pets_message: boolean
+          opening_hour: string
+          reminder_10min_enabled: boolean
+          reminder_24h_enabled: boolean
+          updated_at: string
+          user_id: string
+          whatsapp_number: string | null
+        }
+        Insert: {
+          clinic_name?: string
+          closing_hour?: string
+          created_at?: string
+          evaluation_fee?: number
+          evaluation_free_campaign?: boolean
+          id?: string
+          late_cancellation_fee?: boolean
+          no_children_message?: boolean
+          no_pets_message?: boolean
+          opening_hour?: string
+          reminder_10min_enabled?: boolean
+          reminder_24h_enabled?: boolean
+          updated_at?: string
+          user_id: string
+          whatsapp_number?: string | null
+        }
+        Update: {
+          clinic_name?: string
+          closing_hour?: string
+          created_at?: string
+          evaluation_fee?: number
+          evaluation_free_campaign?: boolean
+          id?: string
+          late_cancellation_fee?: boolean
+          no_children_message?: boolean
+          no_pets_message?: boolean
+          opening_hour?: string
+          reminder_10min_enabled?: boolean
+          reminder_24h_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+          whatsapp_number?: string | null
+        }
+        Relationships: []
+      }
+      lancamento_financeiro: {
+        Row: {
+          beneficiario: string | null
+          created_at: string
+          created_by: string | null
+          descricao: string
+          dt_pagamento: string | null
+          dt_vencimento: string
+          grupo_parcela_id: string | null
+          id: string
+          lancamento_pai_id: string | null
+          numero_documento: string | null
+          numero_parcelas: number | null
+          parcela_atual: number | null
+          plano_contas_id: string
+          recorrencia: string
+          status: string
+          tipo: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          beneficiario?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao: string
+          dt_pagamento?: string | null
+          dt_vencimento: string
+          grupo_parcela_id?: string | null
+          id?: string
+          lancamento_pai_id?: string | null
+          numero_documento?: string | null
+          numero_parcelas?: number | null
+          parcela_atual?: number | null
+          plano_contas_id: string
+          recorrencia?: string
+          status?: string
+          tipo: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          beneficiario?: string | null
+          created_at?: string
+          created_by?: string | null
+          descricao?: string
+          dt_pagamento?: string | null
+          dt_vencimento?: string
+          grupo_parcela_id?: string | null
+          id?: string
+          lancamento_pai_id?: string | null
+          numero_documento?: string | null
+          numero_parcelas?: number | null
+          parcela_atual?: number | null
+          plano_contas_id?: string
+          recorrencia?: string
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lancamento_financeiro_lancamento_pai_id_fkey"
+            columns: ["lancamento_pai_id"]
+            isOneToOne: false
+            referencedRelation: "lancamento_financeiro"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lancamento_financeiro_plano_contas_id_fkey"
+            columns: ["plano_contas_id"]
+            isOneToOne: false
+            referencedRelation: "plano_contas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payables: {
         Row: {
           account_id: string | null
@@ -224,6 +394,36 @@ export type Database = {
           },
         ]
       }
+      plano_contas: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           created_at: string
@@ -245,16 +445,50 @@ export type Database = {
         }
         Relationships: []
       }
+      profiles: {
+        Row: {
+          ativo: boolean
+          cargo: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          modulos: string[]
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cargo?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          modulos?: string[]
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cargo?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          modulos?: string[]
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       receivables: {
         Row: {
           account_id: string | null
           amount: number
+          appointment_id: string | null
+          client_name: string | null
           created_at: string
           description: string
           due_date: string
           id: string
           notes: string | null
-          patient_name: string | null
           received_at: string | null
           service_id: string | null
           status: Database["public"]["Enums"]["finance_status"]
@@ -264,12 +498,13 @@ export type Database = {
         Insert: {
           account_id?: string | null
           amount: number
+          appointment_id?: string | null
+          client_name?: string | null
           created_at?: string
           description: string
           due_date: string
           id?: string
           notes?: string | null
-          patient_name?: string | null
           received_at?: string | null
           service_id?: string | null
           status?: Database["public"]["Enums"]["finance_status"]
@@ -279,12 +514,13 @@ export type Database = {
         Update: {
           account_id?: string | null
           amount?: number
+          appointment_id?: string | null
+          client_name?: string | null
           created_at?: string
           description?: string
           due_date?: string
           id?: string
           notes?: string | null
-          patient_name?: string | null
           received_at?: string | null
           service_id?: string | null
           status?: Database["public"]["Enums"]["finance_status"]
@@ -300,6 +536,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "receivables_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "receivables_service_id_fkey"
             columns: ["service_id"]
             isOneToOne: false
@@ -311,11 +554,13 @@ export type Database = {
       services: {
         Row: {
           active: boolean
+          category_group: string | null
           cost: number
           created_at: string
           description: string | null
           duration_minutes: number
           id: string
+          is_hof: boolean
           name: string
           price: number
           updated_at: string
@@ -323,11 +568,13 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          category_group?: string | null
           cost?: number
           created_at?: string
           description?: string | null
           duration_minutes?: number
           id?: string
+          is_hof?: boolean
           name: string
           price?: number
           updated_at?: string
@@ -335,11 +582,13 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          category_group?: string | null
           cost?: number
           created_at?: string
           description?: string | null
           duration_minutes?: number
           id?: string
+          is_hof?: boolean
           name?: string
           price?: number
           updated_at?: string
@@ -356,8 +605,13 @@ export type Database = {
     }
     Enums: {
       account_kind: "receita" | "despesa"
-      appointment_status: "agendado" | "confirmado" | "concluido" | "cancelado"
-      appointment_type: "consulta" | "retorno"
+      appointment_status:
+        | "agendado"
+        | "confirmado"
+        | "concluido"
+        | "cancelado"
+        | "falta"
+      appointment_type: "procedimento" | "avaliacao" | "retorno" | "encaixe"
       finance_status: "pendente" | "pago" | "atrasado" | "cancelado"
     }
     CompositeTypes: {
@@ -487,8 +741,14 @@ export const Constants = {
   public: {
     Enums: {
       account_kind: ["receita", "despesa"],
-      appointment_status: ["agendado", "confirmado", "concluido", "cancelado"],
-      appointment_type: ["consulta", "retorno"],
+      appointment_status: [
+        "agendado",
+        "confirmado",
+        "concluido",
+        "cancelado",
+        "falta",
+      ],
+      appointment_type: ["procedimento", "avaliacao", "retorno", "encaixe"],
       finance_status: ["pendente", "pago", "atrasado", "cancelado"],
     },
   },

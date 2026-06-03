@@ -2,6 +2,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Calendar, MessageCircle, Stethoscope, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import logoGabriela from "@/assets/logo_gabriela.jpeg";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
@@ -17,9 +18,11 @@ function Landing() {
     <div className="min-h-screen bg-background">
       <header className="container mx-auto flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-2 font-display text-lg font-bold">
-          <div className="grid h-9 w-9 place-items-center rounded-xl bg-[image:var(--gradient-hero)] text-primary-foreground">
-            <Stethoscope className="h-5 w-5" />
-          </div>
+          <img
+            src={logoGabriela}
+            alt="G-Clin"
+            className="h-10 w-10 rounded-lg object-cover"
+          />
           G-Clin
         </div>
         <Link to="/auth"><Button variant="ghost">Entrar</Button></Link>
