@@ -9,7 +9,6 @@ import {
 } from "@tanstack/react-router";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/hooks/use-auth";
-
 import appCss from "../styles.css?url";
 
 function NotFoundComponent() {
@@ -50,11 +49,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "G-Clin — Gestão de Clínica Médica" },
-      { name: "description", content: "G-Clin: sistema de agendamentos com integração WhatsApp para clínicas médicas." },
+      { title: "G-Clin" },
+      { name: "description", content: "G-Clin: sistema de agendamentos e gestão para clínicas de estética." },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "icon", type: "image/jpeg", href: "/logo_gabriela.jpeg" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" },

@@ -40,36 +40,51 @@
 
 :root {
   --radius: 0.75rem;
-  --background: oklch(0.985 0.01 200);
-  --foreground: oklch(0.22 0.04 220);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.04 220);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.04 220);
-  --primary: oklch(0.55 0.13 200);
-  --primary-foreground: oklch(0.99 0.01 200);
-  --secondary: oklch(0.95 0.025 200);
-  --secondary-foreground: oklch(0.3 0.06 220);
-  --muted: oklch(0.96 0.015 220);
-  --muted-foreground: oklch(0.5 0.03 220);
-  --accent: oklch(0.92 0.06 195);
-  --accent-foreground: oklch(0.28 0.08 220);
-  --destructive: oklch(0.6 0.22 25);
-  --destructive-foreground: oklch(0.99 0 0);
-  --success: oklch(0.65 0.15 155);
-  --success-foreground: oklch(0.99 0 0);
-  --warning: oklch(0.78 0.16 80);
-  --warning-foreground: oklch(0.25 0.05 80);
-  --whatsapp: oklch(0.62 0.16 150);
-  --whatsapp-foreground: oklch(0.99 0 0);
-  --border: oklch(0.9 0.02 220);
-  --input: oklch(0.92 0.02 220);
-  --ring: oklch(0.55 0.13 200);
 
-  --gradient-hero: linear-gradient(135deg, oklch(0.55 0.13 200), oklch(0.65 0.15 175));
-  --gradient-card: linear-gradient(180deg, oklch(1 0 0), oklch(0.97 0.02 200));
-  --shadow-soft: 0 4px 20px -8px oklch(0.55 0.13 200 / 0.18);
-  --shadow-card: 0 2px 8px -2px oklch(0.4 0.05 220 / 0.08);
+  /* Fundos — cinza-frio neutro como base */
+  --background:          #F5F5F3;
+  --card:                #FFFFFF;
+  --popover:             #FFFFFF;
+
+  /* Texto — contraste alto */
+  --foreground:          #1A1614;
+  --card-foreground:     #1A1614;
+  --popover-foreground:  #1A1614;
+
+  /* Primária — dourado escuro (contraste 7:1) */
+  --primary:             #7C5C1E;
+  --primary-foreground:  #FFFFFF;
+
+  /* Secundária */
+  --secondary:           #F0EBE2;
+  --secondary-foreground:#4A3A28;
+
+  /* Muted */
+  --muted:               #E8E6E3;
+  --muted-foreground:    #888072;
+
+  /* Accent — dourado claro decorativo */
+  --accent:              #F5EDE0;
+  --accent-foreground:   #5C4318;
+
+  /* Bordas e inputs */
+  --border:              #E8E6E3;
+  --input:               #F0EBE2;
+  --ring:                #C9A96E;
+
+  /* Status */
+  --destructive:         #C0392B;
+  --destructive-foreground: #FFFFFF;
+  --success:             #1F6B42;
+  --success-foreground:  #FFFFFF;
+  --warning:             #8A5900;
+  --warning-foreground:  #FFFFFF;
+  --whatsapp:            #25D366;
+  --whatsapp-foreground: #FFFFFF;
+
+  /* Decorativo */
+  --gold-mid:            #C9A96E;
+  --shadow-card:   0 1px 4px rgba(0,0,0,0.07);
 }
 
 @layer base {
@@ -80,4 +95,20 @@
     font-family: var(--font-sans);
   }
   h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #E7D5C1;
+    border-radius: 999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #C8A56A;
+  }
 }

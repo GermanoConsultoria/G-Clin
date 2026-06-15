@@ -16,83 +16,144 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { buildMessage, whatsappLink, type MsgKind } from "@/lib/whatsapp";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
-type Plan = { id: string; name: string };
-type Category = { id: string; name: string };
+type Service = { id: string; name: string; duration_minutes: number; price: number; is_hof: boolean };
+
 export type Appointment = {
   id: string;
-  patient_name: string;
+  client_name: string;
   phone: string;
-  plan_id: string | null;
-  plan_name: string | null;
-  type: "consulta" | "retorno";
+  service_id: string | null;
+  service_name: string | null;
+  type: "procedimento" | "avaliacao" | "retorno" | "encaixe";
   scheduled_at: string;
-  status: "agendado" | "confirmado" | "concluido" | "cancelado";
+  status: "agendado" | "confirmado" | "concluido" | "cancelado" | "falta";
   notes: string | null;
   wants_to_anticipate: boolean;
-  category: string | null;
+  extra_charge: boolean;
 };
 
 const statusStyle: Record<Appointment["status"], { cls: string; icon: typeof Clock; label: string }> = {
-  agendado: { cls: "bg-warning/15 text-warning border-warning/30", icon: Clock, label: "Aguardando" },
-  confirmado: { cls: "bg-success/15 text-success border-success/30", icon: CheckCircle2, label: "Confirmado" },
-  concluido: { cls: "bg-muted text-muted-foreground", icon: CheckCircle2, label: "Concluído" },
-  cancelado: { cls: "bg-destructive/15 text-destructive border-destructive/30", icon: XCircle, label: "Cancelado" },
+  agendado:   { cls: "bg-warning/15 text-warning border-warning/30",            icon: Clock,         label: "Aguardando" },
+  confirmado: { cls: "bg-success/15 text-success border-success/30",            icon: CheckCircle2,  label: "Confirmado" },
+  concluido:  { cls: "bg-muted text-muted-foreground",                           icon: CheckCircle2,  label: "Concluído" },
+  cancelado:  { cls: "bg-destructive/15 text-destructive border-destructive/30", icon: XCircle,       label: "Cancelado" },
+  falta:      { cls: "bg-orange-100 text-orange-700 border-orange-200",          icon: AlertTriangle, label: "Falta" },
 };
+
+function generateAllSlots(): string[] {
+  const slots: string[] = [];
+  for (let h = 8; h < 19; h++) {
+    slots.push(`${String(h).padStart(2, "0")}:00`);
+    slots.push(`${String(h).padStart(2, "0")}:30`);
+  }
+  return slots;
+}
+
+function getAvailableSlots(
+  date: string,
+  newDuration: number,
+  existingAppts: { scheduled_at: string; service_id: string | null }[],
+  services: Service[],
+  editingId?: string,
+): string[] {
+  const allSlots = generateAllSlots();
+  const busyIntervals = existingAppts
+    .filter((a: any) => a.id !== editingId)
+    .map((a) => {
+      const start = new Date(a.scheduled_at).getTime();
+      const svc = services.find((s) => s.id === a.service_id);
+      const duration = svc?.duration_minutes ?? 30;
+      return { start, end: start + duration * 60 * 1000 };
+    });
+  return allSlots.filter((slot) => {
+    const slotStart = new Date(`${date}T${slot}`).getTime();
+    const slotEnd = slotStart + newDuration * 60 * 1000;
+    return !busyIntervals.some((b) => slotStart < b.end && slotEnd > b.start);
+  });
+}
+
+function buildWhatsappMsg(kind: "agendamento" | "confirmacao" | "lembrete" | "reagendamento" | "antecipar", opts: {
+  clientName: string;
+  scheduledAt: Date;
+  serviceName?: string | null;
+  newSlot?: Date;
+}): string {
+  const when = format(opts.scheduledAt, "EEEE, dd 'de' MMMM 'às' HH:mm", { locale: ptBR });
+  const servico = opts.serviceName ? ` — *${opts.serviceName}*` : "";
+  const regras = "\n\n⚠️ *Lembretes importantes:*\n• Não traga crianças ou animais\n• Em caso de falta, o próximo atendimento terá custo adicional";
+  switch (kind) {
+    case "agendamento":
+      return `Olá, ${opts.clientName}! 👋\n\nSeu agendamento${servico} foi confirmado para *${when}*. 🎉${regras}\n\nQualquer dúvida, é só responder esta mensagem!`;
+    case "confirmacao":
+      return `Olá, ${opts.clientName}! 😊\n\nPassando para confirmar seu procedimento${servico} *amanhã*, *${when}*.\n\nPor favor, confirme respondendo *SIM* ✅ ou *NÃO* ❌.${regras}`;
+    case "lembrete":
+      return `Olá, ${opts.clientName}! ⏰\n\nSeu procedimento${servico} começa em *10 minutos* — *${when}*.\n\nEstamos te esperando! 💛`;
+    case "reagendamento":
+      return `Olá, ${opts.clientName}! Precisamos *reagendar* seu procedimento${servico} que estava marcado para ${when}.\n\nPor favor, entre em contato para escolher um novo horário. 📅`;
+    case "antecipar": {
+      const novo = opts.newSlot ? format(opts.newSlot, "EEEE, dd 'de' MMMM 'às' HH:mm", { locale: ptBR }) : when;
+      return `Olá, ${opts.clientName}! 🎉 Surgiu uma *vaga antecipada* para *${novo}*.\n\nVocê manifestou interesse em antecipar. Se quiser este horário, responda *SIM* o quanto antes — vai para quem responder primeiro!`;
+    }
+  }
+}
+
+function whatsappLink(phone: string, message: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const full = digits.length <= 11 ? `55${digits}` : digits;
+  return `https://wa.me/${full}?text=${encodeURIComponent(message)}`;
+}
 
 function Dashboard() {
   const { user } = useAuth();
   const [appts, setAppts] = useState<Appointment[]>([]);
-  const [plans, setPlans] = useState<Plan[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [anticipateFor, setAnticipateFor] = useState<Appointment | null>(null);
+  const [concludingAppt, setConcludingAppt] = useState<Appointment | null>(null);
 
   const load = async () => {
     setLoading(true);
-    const [{ data: a }, { data: p }, { data: c }] = await Promise.all([
+    const [{ data: a }, { data: s }] = await Promise.all([
       supabase.from("appointments").select("*").order("scheduled_at", { ascending: true }),
-      supabase.from("plans").select("id, name").order("name"),
-      supabase.from("categories").select("id, name").order("name"),
+      supabase.from("services").select("id, name, duration_minutes, price, is_hof").eq("active", true).order("name"),
     ]);
     setAppts((a as Appointment[]) ?? []);
-    setPlans((p as Plan[]) ?? []);
-    setCategories((c as Category[]) ?? []);
+    setServices((s as Service[]) ?? []);
     setLoading(false);
   };
 
   useEffect(() => { if (user) load(); }, [user]);
 
   const onDelete = async (id: string) => {
+    if (!confirm("Excluir este agendamento?")) return;
     const { error } = await supabase.from("appointments").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Agendamento removido");
     load();
   };
 
-  const sendWhats = (a: Appointment, kind: MsgKind) => {
-    const msg = buildMessage({
-      kind,
-      patientName: a.patient_name,
+  const sendWhats = (a: Appointment, kind: "agendamento" | "confirmacao" | "lembrete" | "reagendamento") => {
+    const msg = buildWhatsappMsg(kind, {
+      clientName: a.client_name,
       scheduledAt: new Date(a.scheduled_at),
-      type: a.type,
-      planName: a.plan_name,
+      serviceName: a.service_name,
     });
     window.open(whatsappLink(a.phone, msg), "_blank");
   };
 
   const updateStatus = async (a: Appointment, status: Appointment["status"]) => {
+    if (status === "concluido") {
+      setConcludingAppt(a);
+      return;
+    }
     const { error } = await supabase.from("appointments").update({ status }).eq("id", a.id);
     if (error) return toast.error(error.message);
-    if (status === "cancelado") {
-      // oferecer disparo para quem aceita antecipar
-      setAnticipateFor({ ...a, status });
-    }
+    if (status === "cancelado") setAnticipateFor({ ...a, status });
     load();
   };
 
@@ -101,7 +162,7 @@ function Dashboard() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold">Agendamentos</h1>
-          <p className="text-sm text-muted-foreground">{appts.length} {appts.length === 1 ? "consulta" : "consultas"} no total</p>
+          <p className="text-sm text-muted-foreground">{appts.length} {appts.length === 1 ? "procedimento" : "procedimentos"} no total</p>
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>
           <DialogTrigger asChild>
@@ -110,8 +171,8 @@ function Dashboard() {
             </Button>
           </DialogTrigger>
           <AppointmentDialog
-            plans={plans}
-            categories={categories}
+            services={services}
+            allAppts={appts}
             editing={editing}
             onClose={() => { setOpen(false); setEditing(null); }}
             onSaved={() => { setOpen(false); setEditing(null); load(); }}
@@ -141,6 +202,7 @@ function Dashboard() {
                   const date = new Date(a.scheduled_at);
                   const s = statusStyle[a.status];
                   const SIcon = s.icon;
+                  const svc = services.find((sv) => sv.id === a.service_id);
                   return (
                     <div key={a.id} className="flex flex-col gap-4 rounded-2xl border bg-card p-5 shadow-[var(--shadow-card)] md:flex-row md:items-center md:justify-between">
                       <div className="flex items-start gap-4">
@@ -152,12 +214,21 @@ function Dashboard() {
                         </div>
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-display text-lg font-semibold">{a.patient_name}</h3>
+                            <h3 className="font-display text-lg font-semibold">{a.client_name}</h3>
                             <Badge variant="outline" className={s.cls}>
                               <SIcon className="mr-1 h-3 w-3" /> {s.label}
                             </Badge>
-                            <Badge variant="secondary">{a.type === "retorno" ? "Retorno" : "Consulta"}</Badge>
-                            {a.category && <Badge variant="outline">{a.category}</Badge>}
+                            {a.service_name && (
+                              <Badge variant="secondary" className="flex items-center gap-1">
+                                {a.service_name}
+                                {svc && (
+                                  <span className="inline-flex items-center gap-0.5 text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    {svc.duration_minutes}min
+                                  </span>
+                                )}
+                              </Badge>
+                            )}
                             {a.wants_to_anticipate && (
                               <Badge variant="outline" className="border-primary/30 text-primary">
                                 <Zap className="mr-1 h-3 w-3" /> Aceita antecipar
@@ -167,7 +238,6 @@ function Dashboard() {
                           <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                             <span>{format(date, "EEEE, HH:mm", { locale: ptBR })}</span>
                             <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" />{a.phone}</span>
-                            {a.plan_name && <span>Plano: {a.plan_name}</span>}
                           </div>
                         </div>
                       </div>
@@ -179,18 +249,20 @@ function Dashboard() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => sendWhats(a, "agendamento")}>Enviar agendamento</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => sendWhats(a, "confirmacao")}>Confirmar (24h antes)</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => sendWhats(a, "reagendamento")}>Reagendar</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => sendWhats(a, "agendamento")}>✅ Confirmação de agendamento</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => sendWhats(a, "confirmacao")}>🔔 Lembrete 24h antes</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => sendWhats(a, "lembrete")}>⏰ Lembrete 10 minutos antes</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => sendWhats(a, "reagendamento")}>🔄 Reagendar</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                         <Select value={a.status} onValueChange={(v) => updateStatus(a, v as Appointment["status"])}>
                           <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="agendado">Aguardando</SelectItem>
-                            <SelectItem value="confirmado">Confirmado (sim)</SelectItem>
-                            <SelectItem value="cancelado">Cancelado (não)</SelectItem>
+                            <SelectItem value="confirmado">Confirmado</SelectItem>
                             <SelectItem value="concluido">Concluído</SelectItem>
+                            <SelectItem value="cancelado">Cancelado</SelectItem>
+                            <SelectItem value="falta">Falta</SelectItem>
                           </SelectContent>
                         </Select>
                         <Button variant="ghost" size="icon" onClick={() => { setEditing(a); setOpen(true); }}>
@@ -208,47 +280,119 @@ function Dashboard() {
           </TabsContent>
 
           <TabsContent value="calendar" className="mt-4">
-            <CalendarView
-              appts={appts}
-              onEdit={(a) => { setEditing(a); setOpen(true); }}
-            />
+            <CalendarView appts={appts} services={services} onEdit={(a) => { setEditing(a); setOpen(true); }} />
           </TabsContent>
         </Tabs>
       )}
 
-      <AnticipateDialog
-        appts={appts}
-        canceled={anticipateFor}
-        onClose={() => setAnticipateFor(null)}
+      <ConcludeDialog
+        appt={concludingAppt}
+        services={services}
+        onClose={() => setConcludingAppt(null)}
+        onSaved={() => { setConcludingAppt(null); load(); }}
       />
+      <AnticipateDialog appts={appts} canceled={anticipateFor} onClose={() => setAnticipateFor(null)} />
     </div>
   );
 }
 
-function AnticipateDialog({
-  appts, canceled, onClose,
-}: { appts: Appointment[]; canceled: Appointment | null; onClose: () => void }) {
+function ConcludeDialog({ appt, services, onClose, onSaved }: {
+  appt: Appointment | null;
+  services: Service[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { user } = useAuth();
+  const [valor, setValor] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const svc = services.find((s) => s.id === appt?.service_id);
+  const isHof = svc?.is_hof ?? false;
+
+  useEffect(() => {
+    if (appt) {
+      const found = services.find((s) => s.id === appt.service_id);
+      setValor(found ? String(found.price) : "0");
+    }
+  }, [appt, services]);
+
+  const handleConfirm = async () => {
+    if (!appt || !user) return;
+    setSaving(true);
+    const { error: apptError } = await supabase.from("appointments").update({ status: "concluido" }).eq("id", appt.id);
+    if (apptError) { toast.error(apptError.message); setSaving(false); return; }
+    const { error: recError } = await supabase.from("receivables").insert({
+      user_id: user.id,
+      description: appt.service_name ?? "Procedimento",
+      client_name: appt.client_name,
+      amount: Number(valor),
+      due_date: new Date().toISOString().slice(0, 10),
+      service_id: appt.service_id ?? null,
+      notes: `Agendamento concluído em ${new Date().toLocaleDateString("pt-BR")}`,
+      status: "pendente",
+    });
+    if (recError) { toast.error(recError.message); setSaving(false); return; }
+    toast.success("Procedimento concluído e lançado em A receber!");
+    setSaving(false);
+    onSaved();
+  };
+
+  return (
+    <Dialog open={!!appt} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" /> Concluir procedimento
+          </DialogTitle>
+        </DialogHeader>
+        {appt && (
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+              <div className="font-medium">{appt.client_name}</div>
+              <div className="text-muted-foreground">{appt.service_name ?? "Sem serviço"}</div>
+              {isHof && (
+                <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                  ✨ Procedimento HOF — informe o valor cobrado
+                </div>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isHof ? "Valor cobrado (R$)" : "Confirmar valor (R$)"}</Label>
+              <Input type="number" step="0.01" min="0" value={valor} onChange={(e) => setValor(e.target.value)} />
+              {!isHof && <p className="text-xs text-muted-foreground">Valor do serviço pré-preenchido. Ajuste se necessário.</p>}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
+              <Button className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white" onClick={handleConfirm} disabled={saving || !valor || Number(valor) <= 0}>
+                {saving ? "Salvando..." : "Concluir e lançar"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AnticipateDialog({ appts, canceled, onClose }: { appts: Appointment[]; canceled: Appointment | null; onClose: () => void }) {
   const candidates = useMemo(() => {
     if (!canceled) return [];
     const slot = new Date(canceled.scheduled_at);
-    return appts.filter(
-      (x) =>
-        x.id !== canceled.id &&
-        x.wants_to_anticipate &&
-        x.status !== "cancelado" &&
-        x.status !== "concluido" &&
-        new Date(x.scheduled_at) > slot,
+    return appts.filter((x) =>
+      x.id !== canceled.id &&
+      x.wants_to_anticipate &&
+      x.status !== "cancelado" &&
+      x.status !== "concluido" &&
+      new Date(x.scheduled_at) > slot,
     );
   }, [appts, canceled]);
 
   const send = (c: Appointment) => {
     if (!canceled) return;
-    const msg = buildMessage({
-      kind: "antecipar",
-      patientName: c.patient_name,
+    const msg = buildWhatsappMsg("antecipar", {
+      clientName: c.client_name,
       scheduledAt: new Date(c.scheduled_at),
-      type: c.type,
-      planName: c.plan_name,
+      serviceName: c.service_name,
       newSlot: new Date(canceled.scheduled_at),
     });
     window.open(whatsappLink(c.phone, msg), "_blank");
@@ -262,23 +406,20 @@ function AnticipateDialog({
             <Zap className="h-5 w-5 text-primary" /> Oferecer vaga antecipada
           </DialogTitle>
           <DialogDescription>
-            {canceled && (
-              <>Vaga liberada: <b>{format(new Date(canceled.scheduled_at), "EEEE, dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</b>.{" "}
-              Quem responder *SIM* primeiro fica com o horário.</>
-            )}
+            {canceled && (<>Vaga liberada: <b>{format(new Date(canceled.scheduled_at), "EEEE, dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}</b>. Quem responder SIM primeiro fica com o horário.</>)}
           </DialogDescription>
         </DialogHeader>
         {candidates.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-muted/30 p-6 text-center text-sm text-muted-foreground">
             <AlertTriangle className="mx-auto mb-2 h-6 w-6" />
-            Nenhum paciente futuro marcou que aceita antecipar.
+            Nenhum cliente futuro marcou que aceita antecipar.
           </div>
         ) : (
           <div className="max-h-80 space-y-2 overflow-auto">
             {candidates.map((c) => (
               <div key={c.id} className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <div className="font-medium">{c.patient_name}</div>
+                  <div className="font-medium">{c.client_name}</div>
                   <div className="text-xs text-muted-foreground">
                     Atual: {format(new Date(c.scheduled_at), "dd/MM HH:mm", { locale: ptBR })} · {c.phone}
                   </div>
@@ -298,16 +439,19 @@ function AnticipateDialog({
   );
 }
 
-function AppointmentDialog({
-  plans, categories, editing, onClose, onSaved,
-}: { plans: Plan[]; categories: Category[]; editing: Appointment | null; onClose: () => void; onSaved: () => void }) {
+function AppointmentDialog({ services, allAppts, editing, onClose, onSaved }: {
+  services: Service[];
+  allAppts: Appointment[];
+  editing: Appointment | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const { user } = useAuth();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [planId, setPlanId] = useState<string>("none");
-  const [category, setCategory] = useState<string>("none");
-  const [type, setType] = useState<"consulta" | "retorno">("consulta");
-  const [date, setDate] = useState("");
+  const [serviceId, setServiceId] = useState<string>("none");
+  const [type, setType] = useState<Appointment["type"]>("procedimento");
+  const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [time, setTime] = useState("");
   const [notes, setNotes] = useState("");
   const [anticipate, setAnticipate] = useState(false);
@@ -316,38 +460,70 @@ function AppointmentDialog({
   useEffect(() => {
     if (editing) {
       const d = new Date(editing.scheduled_at);
-      setName(editing.patient_name);
+      setName(editing.client_name);
       setPhone(editing.phone);
-      setPlanId(editing.plan_id ?? "none");
-      setCategory(editing.category ?? "none");
+      setServiceId(editing.service_id ?? "none");
       setType(editing.type);
       setDate(format(d, "yyyy-MM-dd"));
       setTime(format(d, "HH:mm"));
       setNotes(editing.notes ?? "");
       setAnticipate(editing.wants_to_anticipate);
     } else {
-      setName(""); setPhone(""); setPlanId("none"); setCategory("none"); setType("consulta");
-      setDate(format(new Date(), "yyyy-MM-dd")); setTime("09:00"); setNotes(""); setAnticipate(false);
+      setName("");
+      setPhone("");
+      setServiceId("none");
+      setType("procedimento");
+      setDate(format(new Date(), "yyyy-MM-dd"));
+      setTime("");
+      setNotes("");
+      setAnticipate(false);
     }
   }, [editing]);
 
+  const availableSlots = useMemo(() => {
+    const selectedService = services.find((s) => s.id === serviceId);
+    const duration = selectedService?.duration_minutes ?? 30;
+    const dayAppts = allAppts.filter((a) => {
+      const d = a.scheduled_at.slice(0, 10);
+      return d === date && a.status !== "cancelado" && a.status !== "falta";
+    });
+    return getAvailableSlots(date, duration, dayAppts, services, editing?.id);
+  }, [date, serviceId, allAppts, services, editing]);
+
+  useEffect(() => {
+    if (time && availableSlots.length > 0 && !availableSlots.includes(time)) {
+      setTime("");
+    }
+  }, [availableSlots]);
+
+  const resetForm = () => {
+    setName("");
+    setPhone("");
+    setServiceId("none");
+    setType("procedimento");
+    setDate(format(new Date(), "yyyy-MM-dd"));
+    setTime("");
+    setNotes("");
+    setAnticipate(false);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user || !time) return;
     setSaving(true);
     const scheduled_at = new Date(`${date}T${time}`).toISOString();
-    const plan = plans.find((p) => p.id === planId);
+    const service = services.find((s) => s.id === serviceId);
     const payload = {
       user_id: user.id,
-      patient_name: name,
+      client_name: name,
       phone,
-      plan_id: planId === "none" ? null : planId,
-      plan_name: plan?.name ?? null,
-      category: category === "none" ? null : category,
+      service_id: serviceId === "none" ? null : serviceId,
+      service_name: service?.name ?? null,
       type,
       scheduled_at,
       notes: notes || null,
       wants_to_anticipate: anticipate,
+      extra_charge: false,
     };
     const { error } = editing
       ? await supabase.from("appointments").update(payload).eq("id", editing.id)
@@ -355,6 +531,7 @@ function AppointmentDialog({
     setSaving(false);
     if (error) return toast.error(error.message);
     toast.success(editing ? "Agendamento atualizado" : "Agendamento criado");
+    resetForm();
     onSaved();
   };
 
@@ -365,12 +542,19 @@ function AppointmentDialog({
       </DialogHeader>
       <form onSubmit={submit} className="space-y-4">
         <div className="space-y-1.5">
-          <Label>Nome do paciente</Label>
+          <Label>Nome do cliente</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div className="space-y-1.5">
           <Label>Telefone (WhatsApp)</Label>
-          <Input placeholder="(11) 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+          <Input
+            placeholder="(11) 99999-9999"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+            inputMode="numeric"
+            maxLength={11}
+            required
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
@@ -378,49 +562,71 @@ function AppointmentDialog({
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
           </div>
           <div className="space-y-1.5">
-            <Label>Horário</Label>
-            <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5">
             <Label>Tipo</Label>
-            <Select value={type} onValueChange={(v) => setType(v as "consulta" | "retorno")}>
+            <Select value={type} onValueChange={(v) => setType(v as Appointment["type"])}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="consulta">Consulta</SelectItem>
+                <SelectItem value="procedimento">Procedimento</SelectItem>
+                <SelectItem value="avaliacao">Avaliação</SelectItem>
                 <SelectItem value="retorno">Retorno</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Plano</Label>
-            <Select value={planId} onValueChange={setPlanId}>
-              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Particular / nenhum</SelectItem>
-                {plans.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                <SelectItem value="encaixe">Encaixe</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label>Categoria do paciente</Label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger><SelectValue placeholder="Ex: Gestante, Ginecologia" /></SelectTrigger>
+          <Label>Serviço</Label>
+          <Select value={serviceId} onValueChange={setServiceId}>
+            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Sem categoria</SelectItem>
-              {categories.map((c) => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+              <SelectItem value="none">Nenhum</SelectItem>
+              {services.map((s) => (
+                <SelectItem key={s.id} value={s.id}>
+                  {s.name} ({s.duration_minutes}min)
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          {categories.length === 0 && (
-            <p className="text-xs text-muted-foreground">Cadastre categorias na aba "Categorias" para selecionar aqui.</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label>
+            Horário disponível
+            {availableSlots.length === 0 && (
+              <span className="ml-2 text-xs text-destructive font-normal">— sem vagas neste dia</span>
+            )}
+          </Label>
+          {availableSlots.length > 0 ? (
+            <div className="grid grid-cols-5 gap-1.5 max-h-40 overflow-y-auto rounded-xl border bg-muted/30 p-2">
+              {availableSlots.map((slot) => (
+                <button
+                  key={slot}
+                  type="button"
+                  onClick={() => setTime(slot)}
+                  className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                    time === slot
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card border border-border hover:border-primary hover:text-primary"
+                  }`}
+                >
+                  {slot}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed bg-muted/30 p-4 text-center text-xs text-muted-foreground">
+              Nenhum horário disponível para esta data e serviço. Escolha outra data.
+            </div>
+          )}
+          {time && (
+            <p className="text-xs text-muted-foreground">
+              Horário selecionado: <span className="font-semibold text-primary">{time}</span>
+            </p>
           )}
         </div>
         <div className="flex items-center justify-between rounded-xl border bg-muted/30 p-3">
           <div className="space-y-0.5">
-            <Label className="text-sm">Aceita antecipar consulta?</Label>
-            <p className="text-xs text-muted-foreground">Em caso de cancelamento de outro paciente, será notificado para pegar a vaga.</p>
+            <Label className="text-sm">Aceita antecipar?</Label>
+            <p className="text-xs text-muted-foreground">Será notificado se surgir vaga antes.</p>
           </div>
           <Switch checked={anticipate} onCheckedChange={setAnticipate} />
         </div>
@@ -430,7 +636,7 @@ function AppointmentDialog({
         </div>
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={onClose}>Cancelar</Button>
-          <Button type="submit" disabled={saving} className="bg-[image:var(--gradient-hero)]">
+          <Button type="submit" disabled={saving || !time} className="bg-[image:var(--gradient-hero)]">
             {saving ? "Salvando..." : "Salvar"}
           </Button>
         </DialogFooter>
@@ -439,7 +645,11 @@ function AppointmentDialog({
   );
 }
 
-function CalendarView({ appts, onEdit }: { appts: Appointment[]; onEdit: (a: Appointment) => void }) {
+function CalendarView({ appts, services, onEdit }: {
+  appts: Appointment[];
+  services: Service[];
+  onEdit: (a: Appointment) => void;
+}) {
   const [cursor, setCursor] = useState(new Date());
   const [selected, setSelected] = useState<Date>(new Date());
 
@@ -499,29 +709,20 @@ function CalendarView({ appts, onEdit }: { appts: Appointment[]; onEdit: (a: App
             const isSel = isSameDay(d, selected);
             const isToday = isSameDay(d, new Date());
             return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setSelected(d)}
-                className={`min-h-20 rounded-lg border p-1.5 text-left transition ${
-                  isSel ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"
-                } ${!inMonth ? "opacity-40" : ""}`}
+              <button key={key} type="button" onClick={() => setSelected(d)}
+                className={`min-h-20 rounded-lg border p-1.5 text-left transition ${isSel ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"} ${!inMonth ? "opacity-40" : ""}`}
               >
-                <div className={`text-xs font-semibold ${isToday ? "text-primary" : ""}`}>
-                  {format(d, "d")}
-                </div>
+                <div className={`text-xs font-semibold ${isToday ? "text-primary" : ""}`}>{format(d, "d")}</div>
                 <div className="mt-1 space-y-0.5">
                   {items.slice(0, 3).map((a) => {
                     const s = statusStyle[a.status];
                     return (
                       <div key={a.id} className={`truncate rounded px-1 py-0.5 text-[10px] ${s.cls}`}>
-                        {format(new Date(a.scheduled_at), "HH:mm")} {a.patient_name}
+                        {format(new Date(a.scheduled_at), "HH:mm")} {a.client_name}
                       </div>
                     );
                   })}
-                  {items.length > 3 && (
-                    <div className="text-[10px] text-muted-foreground">+{items.length - 3} mais</div>
-                  )}
+                  {items.length > 3 && <div className="text-[10px] text-muted-foreground">+{items.length - 3} mais</div>}
                 </div>
               </button>
             );
@@ -533,9 +734,7 @@ function CalendarView({ appts, onEdit }: { appts: Appointment[]; onEdit: (a: App
         <h3 className="font-display text-base font-semibold capitalize">
           {format(selected, "EEEE, dd 'de' MMMM", { locale: ptBR })}
         </h3>
-        <p className="text-xs text-muted-foreground">
-          {dayList.length} {dayList.length === 1 ? "agendamento" : "agendamentos"}
-        </p>
+        <p className="text-xs text-muted-foreground">{dayList.length} {dayList.length === 1 ? "agendamento" : "agendamentos"}</p>
         <div className="mt-3 space-y-2">
           {dayList.length === 0 ? (
             <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
@@ -545,22 +744,20 @@ function CalendarView({ appts, onEdit }: { appts: Appointment[]; onEdit: (a: App
             dayList.map((a) => {
               const s = statusStyle[a.status];
               const SIcon = s.icon;
+              const svc = services.find((sv) => sv.id === a.service_id);
               return (
-                <button
-                  key={a.id}
-                  onClick={() => onEdit(a)}
-                  className="w-full rounded-lg border p-3 text-left hover:bg-muted/40"
-                >
+                <button key={a.id} onClick={() => onEdit(a)} className="w-full rounded-lg border p-3 text-left hover:bg-muted/40">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="font-semibold">{format(new Date(a.scheduled_at), "HH:mm")} · {a.patient_name}</div>
-                    <Badge variant="outline" className={s.cls}>
-                      <SIcon className="mr-1 h-3 w-3" />{s.label}
-                    </Badge>
+                    <div className="font-semibold">{format(new Date(a.scheduled_at), "HH:mm")} · {a.client_name}</div>
+                    <Badge variant="outline" className={s.cls}><SIcon className="mr-1 h-3 w-3" />{s.label}</Badge>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
-                    <span>{a.type === "retorno" ? "Retorno" : "Consulta"}</span>
-                    {a.category && <span>{a.category}</span>}
-                    {a.plan_name && <span>{a.plan_name}</span>}
+                    {a.service_name && (
+                      <span className="inline-flex items-center gap-1">
+                        {a.service_name}
+                        {svc && <><Clock className="h-3 w-3" />{svc.duration_minutes}min</>}
+                      </span>
+                    )}
                     <span>{a.phone}</span>
                   </div>
                 </button>
