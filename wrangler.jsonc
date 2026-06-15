@@ -1,7 +1,16 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
   "name": "g-clin",
-  "compatibility_date": "2025-09-24",
+  "main": "dist/server/server.js",
+  "compatibility_date": "2026-06-01",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "src/server.ts"
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": "./dist/client"
+  },
+  "vars": {
+    "SUPABASE_URL": "https://otjzxrwuzkugpfwnyuox.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90anp4cnd1emt1Z3Bmd255dW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NTQxNTMsImV4cCI6MjA5NjAzMDE1M30.WXW2h_GiR75QxqFSLTDSC1wTjyjVEY-GzmybXfcdp5w"
+  }
 }
