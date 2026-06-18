@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Plus, MessageCircle, Trash2, Pencil, Calendar as CalendarIcon, Phone, Zap, AlertTriangle, CheckCircle2, XCircle, Clock, List, ChevronLeft, ChevronRight } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -16,6 +16,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import type { FormaPagamento } from "@/lib/financeiro.types";
+import { generateSlotsForDay, type BusinessHoursRow } from "@/lib/business-hours";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
@@ -29,18 +31,19 @@ export type Appointment = {
   service_name: string | null;
   type: "procedimento" | "avaliacao" | "retorno" | "encaixe";
   scheduled_at: string;
-  status: "agendado" | "confirmado" | "concluido" | "cancelado" | "falta";
+  status: "agendado" | "confirmado" | "concluido" | "cancelado" | "falta" | "pendente_pagamento";
   notes: string | null;
   wants_to_anticipate: boolean;
   extra_charge: boolean;
 };
 
 const statusStyle: Record<Appointment["status"], { cls: string; icon: typeof Clock; label: string }> = {
-  agendado:   { cls: "bg-warning/15 text-warning border-warning/30",            icon: Clock,         label: "Aguardando" },
-  confirmado: { cls: "bg-success/15 text-success border-success/30",            icon: CheckCircle2,  label: "Confirmado" },
-  concluido:  { cls: "bg-muted text-muted-foreground",                           icon: CheckCircle2,  label: "Concluído" },
-  cancelado:  { cls: "bg-destructive/15 text-destructive border-destructive/30", icon: XCircle,       label: "Cancelado" },
-  falta:      { cls: "bg-orange-100 text-orange-700 border-orange-200",          icon: AlertTriangle, label: "Falta" },
+  agendado:            { cls: "bg-warning/15 text-warning border-warning/30",            icon: Clock,         label: "Aguardando" },
+  confirmado:          { cls: "bg-success/15 text-success border-success/30",            icon: CheckCircle2,  label: "Confirmado" },
+  concluido:           { cls: "bg-muted text-muted-foreground",                           icon: CheckCircle2,  label: "Concluído" },
+  cancelado:           { cls: "bg-destructive/15 text-destructive border-destructive/30", icon: XCircle,       label: "Cancelado" },
+  falta:               { cls: "bg-orange-100 text-orange-700 border-orange-200",          icon: AlertTriangle, label: "Falta" },
+  pendente_pagamento:  { cls: "bg-orange-100 text-orange-700 border-orange-200",          icon: Clock,         label: "Pend. Pagamento" },
 };
 
 function generateAllSlots(): string[] {
@@ -58,8 +61,9 @@ function getAvailableSlots(
   existingAppts: { scheduled_at: string; service_id: string | null }[],
   services: Service[],
   editingId?: string,
+  bh?: BusinessHoursRow | null,
 ): string[] {
-  const allSlots = generateAllSlots();
+  const allSlots = bh ? generateSlotsForDay(bh, newDuration) : generateAllSlots();
   const busyIntervals = existingAppts
     .filter((a: any) => a.id !== editingId)
     .map((a) => {
@@ -110,20 +114,40 @@ function Dashboard() {
   const { user } = useAuth();
   const [appts, setAppts] = useState<Appointment[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [businessHours, setBusinessHours] = useState<BusinessHoursRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [anticipateFor, setAnticipateFor] = useState<Appointment | null>(null);
   const [concludingAppt, setConcludingAppt] = useState<Appointment | null>(null);
+  const [filtroPeriodo, setFiltroPeriodo] = useState<"hoje" | "mes" | "dia">("hoje");
+  const [filtroDataDia, setFiltroDataDia] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState<string>("TODOS");
+
+  const apptsFiltrados = useMemo(() => {
+    const hoje = format(new Date(), "yyyy-MM-dd");
+    const inicioMes = format(startOfMonth(new Date()), "yyyy-MM-dd");
+    const fimMes = format(endOfMonth(new Date()), "yyyy-MM-dd");
+    return appts.filter((a) => {
+      if (filtroStatus !== "TODOS" && a.status !== filtroStatus) return false;
+      const data = a.scheduled_at.slice(0, 10);
+      if (filtroPeriodo === "hoje") return data === hoje;
+      if (filtroPeriodo === "mes") return data >= inicioMes && data <= fimMes;
+      if (filtroPeriodo === "dia") return !filtroDataDia || data === filtroDataDia;
+      return true;
+    });
+  }, [appts, filtroStatus, filtroPeriodo, filtroDataDia]);
 
   const load = async () => {
     setLoading(true);
-    const [{ data: a }, { data: s }] = await Promise.all([
+    const [{ data: a }, { data: s }, { data: bh }] = await Promise.all([
       supabase.from("appointments").select("*").order("scheduled_at", { ascending: true }),
       supabase.from("services").select("id, name, duration_minutes, price, is_hof").eq("active", true).order("name"),
+      supabase.from("business_hours").select("weekday,is_open,open_time,close_time,break_start,break_end"),
     ]);
     setAppts((a as Appointment[]) ?? []);
     setServices((s as Service[]) ?? []);
+    setBusinessHours((bh as BusinessHoursRow[]) ?? []);
     setLoading(false);
   };
 
@@ -159,10 +183,14 @@ function Dashboard() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold">Agendamentos</h1>
-          <p className="text-sm text-muted-foreground">{appts.length} {appts.length === 1 ? "procedimento" : "procedimentos"} no total</p>
+          <p className="text-sm text-muted-foreground">
+            {apptsFiltrados.length !== appts.length
+              ? `${apptsFiltrados.length} de ${appts.length} procedimentos`
+              : `${appts.length} ${appts.length === 1 ? "procedimento" : "procedimentos"} no total`}
+          </p>
         </div>
         <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}>
           <DialogTrigger asChild>
@@ -174,10 +202,62 @@ function Dashboard() {
             services={services}
             allAppts={appts}
             editing={editing}
+            businessHours={businessHours}
             onClose={() => { setOpen(false); setEditing(null); }}
             onSaved={() => { setOpen(false); setEditing(null); load(); }}
           />
         </Dialog>
+      </div>
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center rounded-lg border bg-muted/50 p-1 gap-0.5">
+          {([
+            { value: "hoje", label: "Hoje" },
+            { value: "mes",  label: "Este Mês" },
+            { value: "dia",  label: "Selecionar Dia" },
+          ] as const).map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setFiltroPeriodo(opt.value)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                filtroPeriodo === opt.value
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        {filtroPeriodo === "dia" && (
+          <Input
+            type="date"
+            value={filtroDataDia}
+            onChange={(e) => setFiltroDataDia(e.target.value)}
+            className="h-9 w-44 text-sm"
+          />
+        )}
+        <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+          <SelectTrigger className="h-9 w-48"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TODOS">Todos os status</SelectItem>
+            <SelectItem value="agendado">Aguardando</SelectItem>
+            <SelectItem value="confirmado">Confirmado</SelectItem>
+            <SelectItem value="pendente_pagamento">Pend. Pagamento</SelectItem>
+            <SelectItem value="concluido">Concluído</SelectItem>
+            <SelectItem value="cancelado">Cancelado</SelectItem>
+            <SelectItem value="falta">Falta</SelectItem>
+          </SelectContent>
+        </Select>
+        {(filtroStatus !== "TODOS" || filtroPeriodo !== "hoje") && (
+          <button
+            onClick={() => { setFiltroStatus("TODOS"); setFiltroPeriodo("hoje"); setFiltroDataDia(""); }}
+            className="text-xs text-muted-foreground hover:text-foreground underline"
+          >
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -190,15 +270,19 @@ function Dashboard() {
           </TabsList>
 
           <TabsContent value="list" className="mt-4">
-            {appts.length === 0 ? (
+            {apptsFiltrados.length === 0 ? (
               <div className="rounded-2xl border border-dashed bg-card p-12 text-center">
                 <CalendarIcon className="mx-auto h-10 w-10 text-muted-foreground" />
-                <h3 className="mt-4 font-display text-lg font-semibold">Nenhum agendamento ainda</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Clique em "Novo agendamento" para começar.</p>
+                <h3 className="mt-4 font-display text-lg font-semibold">
+                  {appts.length === 0 ? "Nenhum agendamento ainda" : "Nenhum resultado para os filtros aplicados"}
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {appts.length === 0 ? 'Clique em "Novo agendamento" para começar.' : "Tente ajustar os filtros acima."}
+                </p>
               </div>
             ) : (
               <div className="grid gap-3">
-                {appts.map((a) => {
+                {apptsFiltrados.map((a) => {
                   const date = new Date(a.scheduled_at);
                   const s = statusStyle[a.status];
                   const SIcon = s.icon;
@@ -256,10 +340,11 @@ function Dashboard() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                         <Select value={a.status} onValueChange={(v) => updateStatus(a, v as Appointment["status"])}>
-                          <SelectTrigger className="h-9 w-40"><SelectValue /></SelectTrigger>
+                          <SelectTrigger className="h-9 w-44"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="agendado">Aguardando</SelectItem>
                             <SelectItem value="confirmado">Confirmado</SelectItem>
+                            <SelectItem value="pendente_pagamento">Pend. Pagamento</SelectItem>
                             <SelectItem value="concluido">Concluído</SelectItem>
                             <SelectItem value="cancelado">Cancelado</SelectItem>
                             <SelectItem value="falta">Falta</SelectItem>
@@ -280,7 +365,7 @@ function Dashboard() {
           </TabsContent>
 
           <TabsContent value="calendar" className="mt-4">
-            <CalendarView appts={appts} services={services} onEdit={(a) => { setEditing(a); setOpen(true); }} />
+            <CalendarView appts={apptsFiltrados} services={services} onEdit={(a) => { setEditing(a); setOpen(true); }} />
           </TabsContent>
         </Tabs>
       )}
@@ -296,6 +381,15 @@ function Dashboard() {
   );
 }
 
+const FORMAS_PAGAMENTO: { value: FormaPagamento | "PENDENTE"; label: string }[] = [
+  { value: "DINHEIRO",       label: "Dinheiro" },
+  { value: "PIX",            label: "PIX" },
+  { value: "CARTAO_CREDITO", label: "Cartão de Crédito" },
+  { value: "CARTAO_DEBITO",  label: "Cartão de Débito" },
+  { value: "CONVENIO",       label: "Convênio" },
+  { value: "PENDENTE",       label: "Pendente — cobrar depois" },
+];
+
 function ConcludeDialog({ appt, services, onClose, onSaved }: {
   appt: Appointment | null;
   services: Service[];
@@ -304,6 +398,7 @@ function ConcludeDialog({ appt, services, onClose, onSaved }: {
 }) {
   const { user } = useAuth();
   const [valor, setValor] = useState("");
+  const [formaPagamento, setFormaPagamento] = useState<FormaPagamento | "PENDENTE">("DINHEIRO");
   const [saving, setSaving] = useState(false);
 
   const svc = services.find((s) => s.id === appt?.service_id);
@@ -313,26 +408,70 @@ function ConcludeDialog({ appt, services, onClose, onSaved }: {
     if (appt) {
       const found = services.find((s) => s.id === appt.service_id);
       setValor(found ? String(found.price) : "0");
+      setFormaPagamento("DINHEIRO");
     }
   }, [appt, services]);
 
   const handleConfirm = async () => {
     if (!appt || !user) return;
     setSaving(true);
+
     const { error: apptError } = await supabase.from("appointments").update({ status: "concluido" }).eq("id", appt.id);
     if (apptError) { toast.error(apptError.message); setSaving(false); return; }
-    const { error: recError } = await supabase.from("receivables").insert({
-      user_id: user.id,
-      description: appt.service_name ?? "Procedimento",
-      client_name: appt.client_name,
-      amount: Number(valor),
-      due_date: new Date().toISOString().slice(0, 10),
-      service_id: appt.service_id ?? null,
-      notes: `Agendamento concluído em ${new Date().toLocaleDateString("pt-BR")}`,
-      status: "pendente",
+
+    const valorNum = Number(valor);
+
+    // Buscar plano_contas_id: parâmetros do usuário → fallback para primeiro de RECEITA ativo
+    let planoContasId: string | null = null;
+    const { data: params } = await supabase
+      .from("parametros")
+      .select("plano_contas_padrao_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (params?.plano_contas_padrao_id) {
+      planoContasId = params.plano_contas_padrao_id;
+    } else {
+      const { data: pc } = await supabase
+        .from("plano_contas")
+        .select("id")
+        .eq("tipo", "RECEITA")
+        .eq("ativo", true)
+        .order("nome")
+        .limit(1)
+        .maybeSingle();
+      planoContasId = pc?.id ?? null;
+    }
+
+    if (!planoContasId) {
+      toast.error("Nenhuma conta de receita cadastrada. Crie uma em Finanças → Plano de Contas.");
+      toast.success("Procedimento concluído.");
+      setSaving(false);
+      onSaved();
+      return;
+    }
+
+    const isPendente = formaPagamento === "PENDENTE";
+    const dtVencimento = new Date(appt.scheduled_at).toISOString().split("T")[0];
+
+    const { error: lancError } = await supabase.from("lancamento_financeiro").insert({
+      tipo: "RECEITA",
+      descricao: `${appt.service_name ?? "Procedimento"} - ${appt.client_name}`,
+      valor: valorNum,
+      dt_vencimento: `${dtVencimento}T00:00:00.000Z`,
+      status: isPendente ? "PENDENTE" : "PAGO",
+      dt_pagamento: isPendente ? null : new Date().toISOString().split("T")[0],
+      forma_pagamento: isPendente ? null : formaPagamento,
+      plano_contas_id: planoContasId,
+      created_by: user.id,
     });
-    if (recError) { toast.error(recError.message); setSaving(false); return; }
-    toast.success("Procedimento concluído e lançado em A receber!");
+
+    if (lancError) {
+      toast.warning(`Procedimento concluído, mas falha ao criar lançamento: ${lancError.message}`);
+    } else {
+      toast.success("Procedimento concluído e lançamento criado!");
+    }
+
     setSaving(false);
     onSaved();
   };
@@ -360,6 +499,17 @@ function ConcludeDialog({ appt, services, onClose, onSaved }: {
               <Label>{isHof ? "Valor cobrado (R$)" : "Confirmar valor (R$)"}</Label>
               <Input type="number" step="0.01" min="0" value={valor} onChange={(e) => setValor(e.target.value)} />
               {!isHof && <p className="text-xs text-muted-foreground">Valor do serviço pré-preenchido. Ajuste se necessário.</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Forma de pagamento</Label>
+              <Select value={formaPagamento} onValueChange={(v) => setFormaPagamento(v as FormaPagamento | "PENDENTE")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {FORMAS_PAGAMENTO.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
@@ -439,10 +589,11 @@ function AnticipateDialog({ appts, canceled, onClose }: { appts: Appointment[]; 
   );
 }
 
-function AppointmentDialog({ services, allAppts, editing, onClose, onSaved }: {
+function AppointmentDialog({ services, allAppts, editing, businessHours, onClose, onSaved }: {
   services: Service[];
   allAppts: Appointment[];
   editing: Appointment | null;
+  businessHours: BusinessHoursRow[];
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -456,6 +607,19 @@ function AppointmentDialog({ services, allAppts, editing, onClose, onSaved }: {
   const [notes, setNotes] = useState("");
   const [anticipate, setAnticipate] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const isSlotPast = (slot: string): boolean => {
+    if (editing) return false;
+    const today = format(now, "yyyy-MM-dd");
+    if (date !== today) return false;
+    return isBefore(new Date(`${date}T${slot}`), now);
+  };
 
   useEffect(() => {
     if (editing) {
@@ -480,6 +644,11 @@ function AppointmentDialog({ services, allAppts, editing, onClose, onSaved }: {
     }
   }, [editing]);
 
+  const bhForDay = useMemo(() => {
+    const dow = new Date(date + "T00:00:00").getDay();
+    return businessHours.find((r) => r.weekday === dow) ?? null;
+  }, [date, businessHours]);
+
   const availableSlots = useMemo(() => {
     const selectedService = services.find((s) => s.id === serviceId);
     const duration = selectedService?.duration_minutes ?? 30;
@@ -487,8 +656,8 @@ function AppointmentDialog({ services, allAppts, editing, onClose, onSaved }: {
       const d = a.scheduled_at.slice(0, 10);
       return d === date && a.status !== "cancelado" && a.status !== "falta";
     });
-    return getAvailableSlots(date, duration, dayAppts, services, editing?.id);
-  }, [date, serviceId, allAppts, services, editing]);
+    return getAvailableSlots(date, duration, dayAppts, services, editing?.id, bhForDay);
+  }, [date, serviceId, allAppts, services, editing, bhForDay]);
 
   useEffect(() => {
     if (time && availableSlots.length > 0 && !availableSlots.includes(time)) {
@@ -510,6 +679,10 @@ function AppointmentDialog({ services, allAppts, editing, onClose, onSaved }: {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !time) return;
+    if (isSlotPast(time)) {
+      toast.error("Este horário já passou. Escolha um horário futuro para hoje ou selecione outra data.");
+      return;
+    }
     setSaving(true);
     const scheduled_at = new Date(`${date}T${time}`).toISOString();
     const service = services.find((s) => s.id === serviceId);
@@ -591,35 +764,54 @@ function AppointmentDialog({ services, allAppts, editing, onClose, onSaved }: {
         <div className="space-y-1.5">
           <Label>
             Horário disponível
-            {availableSlots.length === 0 && (
+            {bhForDay && !bhForDay.is_open ? (
+              <span className="ml-2 text-xs text-destructive font-normal">— dia fechado</span>
+            ) : availableSlots.length === 0 ? (
               <span className="ml-2 text-xs text-destructive font-normal">— sem vagas neste dia</span>
-            )}
+            ) : null}
           </Label>
           {availableSlots.length > 0 ? (
             <div className="grid grid-cols-5 gap-1.5 max-h-40 overflow-y-auto rounded-xl border bg-muted/30 p-2">
-              {availableSlots.map((slot) => (
-                <button
-                  key={slot}
-                  type="button"
-                  onClick={() => setTime(slot)}
-                  className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
-                    time === slot
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-card border border-border hover:border-primary hover:text-primary"
-                  }`}
-                >
-                  {slot}
-                </button>
-              ))}
+              {availableSlots.map((slot) => {
+                const past = isSlotPast(slot);
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => {
+                      if (past) {
+                        toast.error("Este horário já passou. Escolha um horário futuro para hoje ou selecione outra data.");
+                        return;
+                      }
+                      setTime(slot);
+                    }}
+                    className={`rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                      past
+                        ? "opacity-40 cursor-not-allowed bg-gray-100 text-gray-400 border border-gray-200"
+                        : time === slot
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-card border border-border hover:border-primary hover:text-primary"
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <div className="rounded-xl border border-dashed bg-muted/30 p-4 text-center text-xs text-muted-foreground">
-              Nenhum horário disponível para esta data e serviço. Escolha outra data.
+              {bhForDay && !bhForDay.is_open
+                ? "Este dia está fechado. Escolha outra data."
+                : "Nenhum horário disponível para esta data e serviço. Escolha outra data."}
             </div>
           )}
           {time && (
             <p className="text-xs text-muted-foreground">
-              Horário selecionado: <span className="font-semibold text-primary">{time}</span>
+              Horário selecionado:{" "}
+              <span className={`font-semibold ${isSlotPast(time) ? "text-destructive line-through" : "text-primary"}`}>
+                {time}
+              </span>
+              {isSlotPast(time) && <span className="ml-1 text-destructive">— horário expirado</span>}
             </p>
           )}
         </div>

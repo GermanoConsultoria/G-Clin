@@ -1,9 +1,9 @@
 import { createFileRoute, Outlet, useNavigate, Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
-  LogOut, Calendar, Home, Search, Clock, Briefcase, 
-  TrendingUp, TrendingDown, Scale, BookOpen, 
-  Settings, Users, Menu, X, Tag, FolderHeart
+  LogOut, Calendar, Home, Search, Clock, Briefcase,
+  TrendingUp, TrendingDown, Scale, BookOpen,
+  Users, Menu, X, Tag, FolderHeart
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,9 +28,9 @@ const financeItems = [
 ] as const;
 
 const configItems = [
-  { to: "/config/usuarios",  label: "Usuários",   icon: Users },
-  { to: "/plans",            label: "Convênios",  icon: Tag },
-  { to: "/categories",       label: "Categorias", icon: FolderHeart },
+  { to: "/config/usuarios", label: "Usuários",   icon: Users },
+  { to: "/plans",           label: "Convênios",  icon: Tag },
+  { to: "/categories",      label: "Categorias", icon: FolderHeart },
 ] as const;
 
 // Componente auxiliar para renderizar os links de forma padronizada

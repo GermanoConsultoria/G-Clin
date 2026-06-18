@@ -271,6 +271,7 @@ export type Database = {
           descricao: string
           dt_pagamento: string | null
           dt_vencimento: string
+          forma_pagamento: string | null
           grupo_parcela_id: string | null
           id: string
           lancamento_pai_id: string | null
@@ -291,6 +292,7 @@ export type Database = {
           descricao: string
           dt_pagamento?: string | null
           dt_vencimento: string
+          forma_pagamento?: string | null
           grupo_parcela_id?: string | null
           id?: string
           lancamento_pai_id?: string | null
@@ -311,6 +313,7 @@ export type Database = {
           descricao?: string
           dt_pagamento?: string | null
           dt_vencimento?: string
+          forma_pagamento?: string | null
           grupo_parcela_id?: string | null
           id?: string
           lancamento_pai_id?: string | null
@@ -423,6 +426,38 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      parametros: {
+        Row: {
+          created_at: string
+          id: string
+          plano_contas_padrao_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plano_contas_padrao_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plano_contas_padrao_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parametros_plano_contas_padrao_id_fkey"
+            columns: ["plano_contas_padrao_id"]
+            isOneToOne: false
+            referencedRelation: "plano_contas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plans: {
         Row: {
@@ -611,6 +646,7 @@ export type Database = {
         | "concluido"
         | "cancelado"
         | "falta"
+        | "pendente_pagamento"
       appointment_type: "procedimento" | "avaliacao" | "retorno" | "encaixe"
       finance_status: "pendente" | "pago" | "atrasado" | "cancelado"
     }
