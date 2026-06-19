@@ -29,7 +29,7 @@ export type DadosMensaisBalancete = {
   mes: string;
   receitas: number;
   despesas: number;
-  lucro: number;
+  resultado: number;
 };
 
 export type ContratoEncerrando = {
@@ -43,15 +43,15 @@ export type ContratoEncerrando = {
 };
 
 export type Balancete = {
-  receitas: number;
-  despesas: number;
-  lucro: number;
-  saldo: number;
+  receitas_pagas: number;
+  despesas_pagas: number;
+  resultado_periodo: number;
+  caixa: number;
   a_receber: number;
   a_pagar: number;
   receitas_por_conta: ItemBalanceteConta[];
   despesas_por_conta: ItemBalanceteConta[];
-  lancamentos_por_conta: Record<string, { descricao: string; valor: number; status: string; dt_vencimento: string }[]>;
+  lancamentos_por_conta: Record<string, { descricao: string; beneficiario: string | null; valor: number; status: string; dt_vencimento: string }[]>;
   dados_mensais: DadosMensaisBalancete[];
   contratos_encerrando: ContratoEncerrando[];
 };

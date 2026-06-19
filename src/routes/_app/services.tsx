@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import type { PlanoContas } from "@/lib/financeiro.types";
 
 export const Route = createFileRoute("/_app/services")({ component: Services });
 
@@ -24,6 +25,7 @@ type Service = {
   active: boolean;
   is_hof: boolean;
   category_group: string | null;
+  plano_contas_id: string | null;
 };
 
 const CATEGORIAS = [
@@ -37,6 +39,15 @@ const CATEGORIAS = [
 
 const CATEGORIA_LABEL: Record<string, string> = Object.fromEntries(CATEGORIAS.map((c) => [c.value, c.label]));
 
+// Mapeamento category_group → nome no plano_contas (igual ao da migration)
+const CATEGORIA_PLANO_NOME: Record<string, string> = {
+  sobrancelhas:     "Sobrancelhas",
+  micropigmentacao: "Micropigmentação",
+  depilacao:        "Depilação",
+  facial:           "Tratamento Facial",
+  hof:              "HOF",
+};
+
 const CATEGORIA_COR: Record<string, string> = {
   sobrancelhas:     "bg-pink-100 text-pink-700 border-pink-200",
   micropigmentacao: "bg-purple-100 text-purple-700 border-purple-200",
@@ -49,12 +60,13 @@ const CATEGORIA_COR: Record<string, string> = {
 const empty = {
   name: "", description: "", price: "0", cost: "0",
   duration_minutes: "30", active: true, is_hof: false,
-  category_group: "outros",
+  category_group: "outros", plano_contas_id: "",
 };
 
 function Services() {
   const { user } = useAuth();
   const [items, setItems] = useState<Service[]>([]);
+  const [planoContas, setPlanoContas] = useState<PlanoContas[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -63,8 +75,12 @@ function Services() {
 
   const load = async () => {
     setLoading(true);
-    const { data } = await supabase.from("services").select("*").order("category_group").order("name");
-    setItems((data as Service[]) ?? []);
+    const [{ data: s }, { data: pc }] = await Promise.all([
+      supabase.from("services").select("*").order("category_group").order("name"),
+      supabase.from("plano_contas").select("*").eq("tipo", "RECEITA").eq("ativo", true).order("nome"),
+    ]);
+    setItems((s as Service[]) ?? []);
+    setPlanoContas(pc ?? []);
     setLoading(false);
   };
 
@@ -83,6 +99,7 @@ function Services() {
       active: form.active,
       is_hof: form.is_hof,
       category_group: form.category_group || null,
+      plano_contas_id: form.plano_contas_id || null,
     };
     const { error } = editingId
       ? await supabase.from("services").update(payload).eq("id", editingId)
@@ -103,6 +120,7 @@ function Services() {
       active: s.active,
       is_hof: s.is_hof,
       category_group: s.category_group ?? "outros",
+      plano_contas_id: s.plano_contas_id ?? "",
     });
     setOpen(true);
   };
@@ -159,7 +177,13 @@ function Services() {
               <div><Label>Descrição</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></div>
               <div>
                 <Label>Categoria</Label>
-                <Select value={form.category_group} onValueChange={(v) => setForm({ ...form, category_group: v, is_hof: v === "hof" })}>
+                <Select value={form.category_group} onValueChange={(v) => {
+                  const nomePlano = CATEGORIA_PLANO_NOME[v];
+                  const pcId = nomePlano
+                    ? (planoContas.find((pc) => pc.nome === nomePlano)?.id ?? form.plano_contas_id)
+                    : form.plano_contas_id;
+                  setForm({ ...form, category_group: v, is_hof: v === "hof", plano_contas_id: pcId || "" });
+                }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {CATEGORIAS.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
@@ -174,6 +198,22 @@ function Services() {
                 </div>
                 <div><Label>Custo (R$)</Label><Input type="number" step="0.01" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} /></div>
                 <div><Label>Duração (min)</Label><Input type="number" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })} /></div>
+              </div>
+              <div>
+                <Label>Categoria financeira (Plano de contas)</Label>
+                <Select
+                  value={form.plano_contas_id || "none"}
+                  onValueChange={(v) => setForm({ ...form, plano_contas_id: v === "none" ? "" : v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhuma (usar padrão)</SelectItem>
+                    {planoContas.map((pc) => (
+                      <SelectItem key={pc.id} value={pc.id}>{pc.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="mt-1 text-xs text-muted-foreground">Usada ao lançar automaticamente no financeiro ao concluir atendimentos.</p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">

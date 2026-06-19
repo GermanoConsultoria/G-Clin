@@ -265,6 +265,7 @@ export type Database = {
       }
       lancamento_financeiro: {
         Row: {
+          appointment_id: string | null
           beneficiario: string | null
           created_at: string
           created_by: string | null
@@ -286,6 +287,7 @@ export type Database = {
           valor: number
         }
         Insert: {
+          appointment_id?: string | null
           beneficiario?: string | null
           created_at?: string
           created_by?: string | null
@@ -307,6 +309,7 @@ export type Database = {
           valor: number
         }
         Update: {
+          appointment_id?: string | null
           beneficiario?: string | null
           created_at?: string
           created_by?: string | null
@@ -328,6 +331,13 @@ export type Database = {
           valor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "lancamento_financeiro_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "lancamento_financeiro_lancamento_pai_id_fkey"
             columns: ["lancamento_pai_id"]
@@ -597,6 +607,7 @@ export type Database = {
           id: string
           is_hof: boolean
           name: string
+          plano_contas_id: string | null
           price: number
           updated_at: string
           user_id: string
@@ -611,6 +622,7 @@ export type Database = {
           id?: string
           is_hof?: boolean
           name: string
+          plano_contas_id?: string | null
           price?: number
           updated_at?: string
           user_id: string
@@ -625,11 +637,20 @@ export type Database = {
           id?: string
           is_hof?: boolean
           name?: string
+          plano_contas_id?: string | null
           price?: number
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "services_plano_contas_id_fkey"
+            columns: ["plano_contas_id"]
+            isOneToOne: false
+            referencedRelation: "plano_contas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   format, eachMonthOfInterval,
@@ -6,8 +6,8 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
-  Calendar, CheckCircle2, XCircle, Clock,
-  TrendingUp, TrendingDown, DollarSign, MessageCircle,
+  AlertCircle, Calendar, CheckCircle2, XCircle, Clock,
+  TrendingUp, TrendingDown, DollarSign, MessageCircle, BellRing,
 } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -29,23 +29,12 @@ type Appointment = {
   scheduled_at: string;
 };
 
-type Receivable = {
+type Lancamento = {
   id: string;
-  amount: number;
-  status: "pendente" | "pago" | "atrasado" | "cancelado";
-  due_date: string;
-};
-
-type Payable = {
-  id: string;
-  amount: number;
-  status: "pendente" | "pago" | "atrasado" | "cancelado";
-  due_date: string;
-};
-
-type ServiceCost = {
-  id: string;
-  cost: number;
+  tipo: string;
+  valor: number;
+  status: string;
+  dt_vencimento: string;
 };
 
 const formatBRL = (v: number) =>
@@ -174,9 +163,17 @@ function Overview() {
   const [to]            = [today];
 
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [receivables,  setReceivables]  = useState<Receivable[]>([]);
-  const [payables,     setPayables]     = useState<Payable[]>([]);
-  const [serviceCosts, setServiceCosts] = useState<ServiceCost[]>([]);
+  const [lancamentos,  setLancamentos]  = useState<Lancamento[]>([]);
+  const [qtdPendentes, setQtdPendentes] = useState(0);
+
+  const carregarPendentes = async () => {
+    const { count } = await supabase
+      .from("lancamento_financeiro")
+      .select("*", { count: "exact", head: true })
+      .eq("tipo", "RECEITA")
+      .eq("status", "PENDENTE");
+    setQtdPendentes(count ?? 0);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -186,15 +183,10 @@ function Overview() {
         .select("id, client_name, phone, status, service_name, type, scheduled_at")
         .order("scheduled_at", { ascending: true }),
       supabase
-        .from("receivables")
-        .select("id, amount, status, due_date")
-        .lte("due_date", today),
-      supabase
-        .from("payables")
-        .select("id, amount, status, due_date")
-        .lte("due_date", today),
-      supabase.from("services").select("id, cost"),
-    ]).then(([{ data: a }, { data: r }, { data: p }, { data: s }]) => {
+        .from("lancamento_financeiro")
+        .select("id, tipo, valor, status, dt_vencimento")
+        .neq("status", "CANCELADO"),
+    ]).then(([{ data: a }, { data: l }]) => {
       const appts = (a as Appointment[]) ?? [];
       setAppointments(appts);
       if (appts.length > 0) {
@@ -202,11 +194,13 @@ function Overview() {
       } else {
         setFrom(format(new Date(), "yyyy-MM") + "-01");
       }
-      setReceivables((r  as Receivable[])  ?? []);
-      setPayables((p     as Payable[])     ?? []);
-      setServiceCosts((s as ServiceCost[]) ?? []);
+      setLancamentos((l as Lancamento[]) ?? []);
     });
-  }, [user, from, to]);
+    carregarPendentes();
+
+    const intervalo = setInterval(carregarPendentes, 60_000);
+    return () => clearInterval(intervalo);
+  }, [user]);
 
   // ── Hoje ──────────────────────────────────────────────────────────────────
   const todayAppts = useMemo(
@@ -235,36 +229,32 @@ function Overview() {
 
   // ── Período ───────────────────────────────────────────────────────────────
   const periodoStats = useMemo(() => {
-    const aReceber  = receivables.filter((r) => r.status === "pendente" || r.status === "atrasado").reduce((s, r) => s + Number(r.amount), 0);
-    const recebido  = receivables.filter((r) => r.status === "pago").reduce((s, r) => s + Number(r.amount), 0);
-    const aPagar    = payables.filter((p) => p.status === "pendente" || p.status === "atrasado").reduce((s, p) => s + Number(p.amount), 0);
-    const pago      = payables.filter((p) => p.status === "pago").reduce((s, p) => s + Number(p.amount), 0);
-    const saldo     = recebido - pago;
-    const previsto  = (recebido + aReceber) - (pago + aPagar);
+    const recebido = lancamentos.filter((l) => l.tipo === "RECEITA" && l.status === "PAGO").reduce((s, l) => s + Number(l.valor), 0);
+    const aReceber = lancamentos.filter((l) => l.tipo === "RECEITA" && l.status === "PENDENTE").reduce((s, l) => s + Number(l.valor), 0);
+    const pago     = lancamentos.filter((l) => l.tipo === "DESPESA" && l.status === "PAGO").reduce((s, l) => s + Number(l.valor), 0);
+    const aPagar   = lancamentos.filter((l) => l.tipo === "DESPESA" && l.status === "PENDENTE").reduce((s, l) => s + Number(l.valor), 0);
+    const saldo    = recebido - pago;
+    const previsto = (recebido + aReceber) - (pago + aPagar);
     return { aReceber, recebido, aPagar, pago, saldo, previsto };
-  }, [receivables, payables]);
+  }, [lancamentos]);
 
   // ── Gráfico mensal ────────────────────────────────────────────────────────
   const chartData = useMemo(() => {
     if (!from || !to) return [];
-    const meses   = eachMonthOfInterval({ start: parseISO(from), end: parseISO(to) });
-    const costMap = new Map(serviceCosts.map((s) => [s.id, Number(s.cost)]));
+    const meses = eachMonthOfInterval({ start: parseISO(from), end: parseISO(to) });
 
     return meses.map((mes) => {
       const label    = format(mes, "MMM/yy", { locale: ptBR });
       const mesStart = format(startOfMonth(mes), "yyyy-MM-dd");
       const mesEnd   = format(endOfMonth(mes),   "yyyy-MM-dd");
 
-      const receita = receivables
-        .filter((r) => r.status === "pago" && r.due_date >= mesStart && r.due_date <= mesEnd)
-        .reduce((s, r) => s + Number(r.amount), 0);
+      const receita = lancamentos
+        .filter((l) => l.tipo === "RECEITA" && l.status === "PAGO" && l.dt_vencimento.slice(0, 10) >= mesStart && l.dt_vencimento.slice(0, 10) <= mesEnd)
+        .reduce((s, l) => s + Number(l.valor), 0);
 
-      const custo = appointments
-        .filter((a) => {
-          const d = a.scheduled_at.slice(0, 10);
-          return a.status === "concluido" && d >= mesStart && d <= mesEnd;
-        })
-        .reduce((s, a) => s + (costMap.get((a as any).service_id) ?? 0), 0);
+      const custo = lancamentos
+        .filter((l) => l.tipo === "DESPESA" && l.status === "PAGO" && l.dt_vencimento.slice(0, 10) >= mesStart && l.dt_vencimento.slice(0, 10) <= mesEnd)
+        .reduce((s, l) => s + Number(l.valor), 0);
 
       return {
         mes: label,
@@ -273,22 +263,45 @@ function Overview() {
         Lucro:   parseFloat((receita - custo).toFixed(2)),
       };
     });
-  }, [appointments, receivables, serviceCosts, from, to]);
+  }, [lancamentos, from, to]);
 
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
     <div>
       {/* Cabeçalho */}
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl font-bold">Painel de informações</h1>
           <p className="text-sm text-muted-foreground">
             {format(new Date(), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
           </p>
         </div>
-
+        {qtdPendentes > 0 && (
+          <Link
+            to="/pending-payments"
+            className="relative flex items-center justify-center h-10 w-10 rounded-full bg-orange-100 hover:bg-orange-200 transition-colors"
+            title={`${qtdPendentes} pagamento(s) pendente(s)`}
+          >
+            <BellRing className="h-5 w-5 text-orange-600" />
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              {qtdPendentes > 99 ? "99+" : qtdPendentes}
+            </span>
+          </Link>
+        )}
       </div>
+
+      {qtdPendentes > 0 && (
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-orange-200 bg-orange-50 px-4 py-3">
+          <AlertCircle className="h-5 w-5 shrink-0 text-orange-500" />
+          <p className="text-sm text-orange-800">
+            Você tem <strong>{qtdPendentes} pagamento{qtdPendentes !== 1 ? "s" : ""} pendente{qtdPendentes !== 1 ? "s" : ""}</strong>.{" "}
+            <Link to="/pending-payments" className="underline font-medium hover:text-orange-900">
+              Verifique os pagamentos pendentes.
+            </Link>
+          </p>
+        </div>
+      )}
 
       {/* ── Hoje em destaque ── */}
       <SectionTitle>Hoje em destaque</SectionTitle>

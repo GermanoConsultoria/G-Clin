@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import {
   LogOut, Calendar, Home, Search, Clock, Briefcase,
   TrendingUp, TrendingDown, Scale, BookOpen,
-  Users, Menu, X, Tag, FolderHeart
+  Users, Menu, X, Tag, FolderHeart, AlertCircle
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,10 +21,11 @@ const mainNavItems = [
 ] as const;
 
 const financeItems = [
-  { to: "/receivables",    label: "A receber",       icon: TrendingUp },
-  { to: "/payables",       label: "A pagar",         icon: TrendingDown },
-  { to: "/balance",        label: "Balancete",       icon: Scale },
-  { to: "/chart-accounts", label: "Plano de contas", icon: BookOpen },
+  { to: "/receivables",      label: "A receber",          icon: TrendingUp },
+  { to: "/payables",         label: "A pagar",            icon: TrendingDown },
+  { to: "/pending-payments", label: "Pend. Pagamentos",   icon: AlertCircle },
+  { to: "/balance",          label: "Balancete",          icon: Scale },
+  { to: "/chart-accounts",   label: "Plano de contas",    icon: BookOpen },
 ] as const;
 
 const configItems = [

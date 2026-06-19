@@ -143,6 +143,7 @@ function TabelaConta({ titulo, itens, total, cor, lancamentosPorConta }: {
                         <thead>
                           <tr className="text-muted-foreground uppercase border-b">
                             <th className="text-left px-8 py-2">Descrição</th>
+                            <th className="text-left px-4 py-2">Cliente</th>
                             <th className="text-center px-4 py-2">Status</th>
                             <th className="text-right px-4 py-2">Vencimento</th>
                             <th className="text-right px-4 py-2">Valor</th>
@@ -155,6 +156,7 @@ function TabelaConta({ titulo, itens, total, cor, lancamentosPorConta }: {
                             return (
                               <tr key={i} className="hover:bg-muted/20">
                                 <td className="px-8 py-2 text-muted-foreground">{l.descricao}</td>
+                                <td className="px-4 py-2 text-muted-foreground">{l.beneficiario ?? "—"}</td>
                                 <td className="px-4 py-2 text-center">
                                   <span className={`px-2 py-0.5 rounded-full border text-[10px] font-semibold ${s.cor}`}>{s.label}</span>
                                 </td>
@@ -285,19 +287,19 @@ export default function BalanceteView({ balancete: inicial, dataInicio, dataFim,
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <CardResumo label="Receitas previstas" valor={b.receitas} cor="text-emerald-600" />
-        <CardResumo label="Despesas previstas" valor={b.despesas} cor="text-red-600" />
-        <CardResumo label={b.lucro >= 0 ? "Lucro previsto" : "Prejuízo previsto"} valor={Math.abs(b.lucro)} cor={b.lucro >= 0 ? "text-emerald-600" : "text-red-600"} />
-        <CardResumo label={b.saldo >= 0 ? "Saldo realizado" : "Déficit realizado"} valor={Math.abs(b.saldo)} cor={b.saldo >= 0 ? "text-primary" : "text-red-600"} />
-        <CardResumo label="A Receber no período" valor={b.a_receber} cor="text-yellow-600" />
-        <CardResumo label="A Pagar no período" valor={b.a_pagar} cor="text-orange-600" />
+        <CardResumo label="Caixa" valor={Math.abs(b.caixa)} cor={b.caixa >= 0 ? "text-emerald-600" : "text-red-600"} />
+        <CardResumo label="Receitas Recebidas" valor={b.receitas_pagas} cor="text-emerald-600" />
+        <CardResumo label="Despesas Pagas" valor={b.despesas_pagas} cor="text-red-600" />
+        <CardResumo label="A Receber" valor={b.a_receber} cor="text-yellow-600" />
+        <CardResumo label="A Pagar" valor={b.a_pagar} cor="text-orange-600" />
+        <CardResumo label="Resultado do Período" valor={Math.abs(b.resultado_periodo)} cor={b.resultado_periodo >= 0 ? "text-emerald-600" : "text-red-600"} />
       </div>
 
       {b.dados_mensais.length > 0 && (
         <Card className="p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold">
-              {tipoGrafico === "pizza" ? "Distribuição do Período" : "Receitas × Despesas × Lucro por Mês"}
+              {tipoGrafico === "pizza" ? "Distribuição do Período" : "Receitas × Despesas × Resultado por Mês"}
             </h2>
             <div className="flex gap-1">
               {(["barra", "linha", "pizza"] as const).map((t) => (
@@ -322,7 +324,7 @@ export default function BalanceteView({ balancete: inicial, dataInicio, dataFim,
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Bar dataKey="receitas" name="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="despesas" name="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="lucro" name="Lucro" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="resultado" name="Resultado" fill="#6366f1" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -337,16 +339,16 @@ export default function BalanceteView({ balancete: inicial, dataInicio, dataFim,
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <Line type="monotone" dataKey="receitas" name="Receitas" stroke="#10b981" strokeWidth={2} dot={{ r: 4 }} />
                 <Line type="monotone" dataKey="despesas" name="Despesas" stroke="#ef4444" strokeWidth={2} dot={{ r: 4 }} />
-                <Line type="monotone" dataKey="lucro" name="Lucro" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="resultado" name="Resultado" stroke="#6366f1" strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           )}
 
           {tipoGrafico === "pizza" && (() => {
             const dadosPizza = [
-              { name: "Receitas", value: b.receitas, color: "#10b981" },
-              { name: "Despesas", value: b.despesas, color: "#ef4444" },
-              ...(b.lucro > 0 ? [{ name: "Lucro", value: b.lucro, color: "#6366f1" }] : []),
+              { name: "Receitas", value: b.receitas_pagas, color: "#10b981" },
+              { name: "Despesas", value: b.despesas_pagas, color: "#ef4444" },
+              ...(b.resultado_periodo > 0 ? [{ name: "Resultado", value: b.resultado_periodo, color: "#6366f1" }] : []),
             ].filter((d) => d.value > 0);
             const total = dadosPizza.reduce((s, d) => s + d.value, 0);
             return (
@@ -384,8 +386,8 @@ export default function BalanceteView({ balancete: inicial, dataInicio, dataFim,
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TabelaConta titulo="Receitas por Conta" itens={b.receitas_por_conta} total={b.receitas} cor="text-emerald-600" lancamentosPorConta={b.lancamentos_por_conta} />
-        <TabelaConta titulo="Despesas por Conta" itens={b.despesas_por_conta} total={b.despesas} cor="text-red-600" lancamentosPorConta={b.lancamentos_por_conta} />
+        <TabelaConta titulo="Receitas por Conta" itens={b.receitas_por_conta} total={b.receitas_pagas} cor="text-emerald-600" lancamentosPorConta={b.lancamentos_por_conta} />
+        <TabelaConta titulo="Despesas por Conta" itens={b.despesas_por_conta} total={b.despesas_pagas} cor="text-red-600" lancamentosPorConta={b.lancamentos_por_conta} />
       </div>
     </div>
   );

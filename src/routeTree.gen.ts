@@ -16,6 +16,7 @@ import { Route as AppSlotsRouteImport } from './routes/_app/slots'
 import { Route as AppServicesRouteImport } from './routes/_app/services'
 import { Route as AppReceivablesRouteImport } from './routes/_app/receivables'
 import { Route as AppPlansRouteImport } from './routes/_app/plans'
+import { Route as AppPendingPaymentsRouteImport } from './routes/_app/pending-payments'
 import { Route as AppPayablesRouteImport } from './routes/_app/payables'
 import { Route as AppOverviewRouteImport } from './routes/_app/overview'
 import { Route as AppHoursRouteImport } from './routes/_app/hours'
@@ -57,6 +58,11 @@ const AppReceivablesRoute = AppReceivablesRouteImport.update({
 const AppPlansRoute = AppPlansRouteImport.update({
   id: '/plans',
   path: '/plans',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPendingPaymentsRoute = AppPendingPaymentsRouteImport.update({
+  id: '/pending-payments',
+  path: '/pending-payments',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPayablesRoute = AppPayablesRouteImport.update({
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
   '/payables': typeof AppPayablesRoute
+  '/pending-payments': typeof AppPendingPaymentsRoute
   '/plans': typeof AppPlansRoute
   '/receivables': typeof AppReceivablesRoute
   '/services': typeof AppServicesRoute
@@ -126,6 +133,7 @@ export interface FileRoutesByTo {
   '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
   '/payables': typeof AppPayablesRoute
+  '/pending-payments': typeof AppPendingPaymentsRoute
   '/plans': typeof AppPlansRoute
   '/receivables': typeof AppReceivablesRoute
   '/services': typeof AppServicesRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   '/_app/hours': typeof AppHoursRoute
   '/_app/overview': typeof AppOverviewRoute
   '/_app/payables': typeof AppPayablesRoute
+  '/_app/pending-payments': typeof AppPendingPaymentsRoute
   '/_app/plans': typeof AppPlansRoute
   '/_app/receivables': typeof AppReceivablesRoute
   '/_app/services': typeof AppServicesRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/hours'
     | '/overview'
     | '/payables'
+    | '/pending-payments'
     | '/plans'
     | '/receivables'
     | '/services'
@@ -178,6 +188,7 @@ export interface FileRouteTypes {
     | '/hours'
     | '/overview'
     | '/payables'
+    | '/pending-payments'
     | '/plans'
     | '/receivables'
     | '/services'
@@ -195,6 +206,7 @@ export interface FileRouteTypes {
     | '/_app/hours'
     | '/_app/overview'
     | '/_app/payables'
+    | '/_app/pending-payments'
     | '/_app/plans'
     | '/_app/receivables'
     | '/_app/services'
@@ -257,6 +269,13 @@ declare module '@tanstack/react-router' {
       path: '/plans'
       fullPath: '/plans'
       preLoaderRoute: typeof AppPlansRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/pending-payments': {
+      id: '/_app/pending-payments'
+      path: '/pending-payments'
+      fullPath: '/pending-payments'
+      preLoaderRoute: typeof AppPendingPaymentsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/payables': {
@@ -326,6 +345,7 @@ interface AppRouteChildren {
   AppHoursRoute: typeof AppHoursRoute
   AppOverviewRoute: typeof AppOverviewRoute
   AppPayablesRoute: typeof AppPayablesRoute
+  AppPendingPaymentsRoute: typeof AppPendingPaymentsRoute
   AppPlansRoute: typeof AppPlansRoute
   AppReceivablesRoute: typeof AppReceivablesRoute
   AppServicesRoute: typeof AppServicesRoute
@@ -341,6 +361,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppHoursRoute: AppHoursRoute,
   AppOverviewRoute: AppOverviewRoute,
   AppPayablesRoute: AppPayablesRoute,
+  AppPendingPaymentsRoute: AppPendingPaymentsRoute,
   AppPlansRoute: AppPlansRoute,
   AppReceivablesRoute: AppReceivablesRoute,
   AppServicesRoute: AppServicesRoute,

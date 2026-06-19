@@ -37,34 +37,43 @@ function BalancetePage() {
     const lancamentos = noPeriodo ?? [];
     const pagos = todosPagos ?? [];
 
-    const receitas = lancamentos.filter((l) => l.tipo === "RECEITA").reduce((s, l) => s + Number(l.valor), 0);
-    const despesas = lancamentos.filter((l) => l.tipo === "DESPESA").reduce((s, l) => s + Number(l.valor), 0);
-    const lucro = receitas - despesas;
+    // Apenas lançamentos PAGOS no período
+    const receitas_pagas = lancamentos.filter((l) => l.tipo === "RECEITA" && l.status === "PAGO").reduce((s, l) => s + Number(l.valor), 0);
+    const despesas_pagas = lancamentos.filter((l) => l.tipo === "DESPESA" && l.status === "PAGO").reduce((s, l) => s + Number(l.valor), 0);
+    const resultado_periodo = receitas_pagas - despesas_pagas;
 
-    const saldoReceitas = pagos.filter((l) => l.tipo === "RECEITA").reduce((s, l) => s + Number(l.valor), 0);
-    const saldoDespesas = pagos.filter((l) => l.tipo === "DESPESA").reduce((s, l) => s + Number(l.valor), 0);
-    const saldo = saldoReceitas - saldoDespesas;
+    // Caixa = saldo acumulado de todos os pagamentos (todos os tempos)
+    const caixaReceitas = pagos.filter((l) => l.tipo === "RECEITA").reduce((s, l) => s + Number(l.valor), 0);
+    const caixaDespesas = pagos.filter((l) => l.tipo === "DESPESA").reduce((s, l) => s + Number(l.valor), 0);
+    const caixa = caixaReceitas - caixaDespesas;
 
+    // Pendentes no período
     const a_receber = lancamentos.filter((l) => l.tipo === "RECEITA" && l.status === "PENDENTE").reduce((s, l) => s + Number(l.valor), 0);
     const a_pagar = lancamentos.filter((l) => l.tipo === "DESPESA" && l.status === "PENDENTE").reduce((s, l) => s + Number(l.valor), 0);
 
     const receitasPorConta = new Map<string, { nome: string; total: number }>();
     const despesasPorConta = new Map<string, { nome: string; total: number }>();
-    const lancamentosPorConta: Record<string, { descricao: string; valor: number; status: string; dt_vencimento: string }[]> = {};
+    const lancamentosPorConta: Record<string, { descricao: string; beneficiario: string | null; valor: number; status: string; dt_vencimento: string }[]> = {};
 
     for (const l of lancamentos) {
-      const mapa = l.tipo === "RECEITA" ? receitasPorConta : despesasPorConta;
       const pc = l.plano_contas as { id: string; nome: string } | null;
       if (!pc) continue;
-      const atual = mapa.get(l.plano_contas_id) ?? { nome: pc.nome, total: 0 };
-      mapa.set(l.plano_contas_id, { nome: pc.nome, total: atual.total + Number(l.valor) });
+
+      // Detalhe: todos os lançamentos do período (PAGO e PENDENTE)
       if (!lancamentosPorConta[l.plano_contas_id]) lancamentosPorConta[l.plano_contas_id] = [];
       lancamentosPorConta[l.plano_contas_id].push({
         descricao: l.descricao,
+        beneficiario: l.beneficiario ?? null,
         valor: Number(l.valor),
         status: l.status,
         dt_vencimento: l.dt_vencimento,
       });
+
+      // Totais por conta: apenas PAGOS
+      if (l.status !== "PAGO") continue;
+      const mapa = l.tipo === "RECEITA" ? receitasPorConta : despesasPorConta;
+      const atual = mapa.get(l.plano_contas_id) ?? { nome: pc.nome, total: 0 };
+      mapa.set(l.plano_contas_id, { nome: pc.nome, total: atual.total + Number(l.valor) });
     }
 
     const mesesPtBR: Record<string, string> = {
@@ -74,6 +83,8 @@ function BalancetePage() {
     };
     const mesesMap = new Map<string, { receitas: number; despesas: number }>();
     for (const l of lancamentos) {
+      // Gráfico: apenas lançamentos PAGOS
+      if (l.status !== "PAGO") continue;
       const dt = new Date(l.dt_vencimento);
       const chave = `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}`;
       const atual = mesesMap.get(chave) ?? { receitas: 0, despesas: 0 };
@@ -85,7 +96,7 @@ function BalancetePage() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([chave, v]) => {
         const [ano, mes] = chave.split("-");
-        return { mes: `${mesesPtBR[mes]}/${ano.slice(2)}`, receitas: v.receitas, despesas: v.despesas, lucro: Math.max(0, v.receitas - v.despesas) };
+        return { mes: `${mesesPtBR[mes]}/${ano.slice(2)}`, receitas: v.receitas, despesas: v.despesas, resultado: v.receitas - v.despesas };
       });
 
     const hojeD = new Date();
@@ -128,7 +139,7 @@ function BalancetePage() {
     }
 
     setBalancete({
-      receitas, despesas, lucro, saldo, a_receber, a_pagar,
+      receitas_pagas, despesas_pagas, resultado_periodo, caixa, a_receber, a_pagar,
       receitas_por_conta: Array.from(receitasPorConta.entries()).map(([plano_contas_id, v]) => ({ plano_contas_id, ...v })),
       despesas_por_conta: Array.from(despesasPorConta.entries()).map(([plano_contas_id, v]) => ({ plano_contas_id, ...v })),
       lancamentos_por_conta: lancamentosPorConta,

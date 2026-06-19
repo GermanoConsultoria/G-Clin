@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, MessageCircle, Trash2, Pencil, Calendar as CalendarIcon, Phone, Zap, AlertTriangle, CheckCircle2, XCircle, Clock, List, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, MessageCircle, Trash2, Pencil, Calendar as CalendarIcon, Phone, Zap, AlertTriangle, CheckCircle2, XCircle, Clock, List, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ import { generateSlotsForDay, type BusinessHoursRow } from "@/lib/business-hours
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
-type Service = { id: string; name: string; duration_minutes: number; price: number; is_hof: boolean };
+type Service = { id: string; name: string; duration_minutes: number; price: number; is_hof: boolean; plano_contas_id: string | null; category_group: string | null };
 
 export type Appointment = {
   id: string;
@@ -45,6 +45,15 @@ const statusStyle: Record<Appointment["status"], { cls: string; icon: typeof Clo
   falta:               { cls: "bg-orange-100 text-orange-700 border-orange-200",          icon: AlertTriangle, label: "Falta" },
   pendente_pagamento:  { cls: "bg-orange-100 text-orange-700 border-orange-200",          icon: Clock,         label: "Pend. Pagamento" },
 };
+
+const CATEGORIAS_MODAL = [
+  { value: "sobrancelhas",     label: "Sobrancelhas" },
+  { value: "micropigmentacao", label: "Micropigmentação" },
+  { value: "depilacao",        label: "Depilação" },
+  { value: "facial",           label: "Tratamento Facial" },
+  { value: "hof",              label: "HOF (Alto Valor)" },
+  { value: "outros",           label: "Outros" },
+] as const;
 
 function generateAllSlots(): string[] {
   const slots: string[] = [];
@@ -120,6 +129,7 @@ function Dashboard() {
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [anticipateFor, setAnticipateFor] = useState<Appointment | null>(null);
   const [concludingAppt, setConcludingAppt] = useState<Appointment | null>(null);
+  const [pendingPaymentAppt, setPendingPaymentAppt] = useState<Appointment | null>(null);
   const [filtroPeriodo, setFiltroPeriodo] = useState<"hoje" | "mes" | "dia">("hoje");
   const [filtroDataDia, setFiltroDataDia] = useState("");
   const [filtroStatus, setFiltroStatus] = useState<string>("TODOS");
@@ -142,7 +152,7 @@ function Dashboard() {
     setLoading(true);
     const [{ data: a }, { data: s }, { data: bh }] = await Promise.all([
       supabase.from("appointments").select("*").order("scheduled_at", { ascending: true }),
-      supabase.from("services").select("id, name, duration_minutes, price, is_hof").eq("active", true).order("name"),
+      supabase.from("services").select("*").eq("active", true).order("name"),
       supabase.from("business_hours").select("weekday,is_open,open_time,close_time,break_start,break_end"),
     ]);
     setAppts((a as Appointment[]) ?? []);
@@ -173,6 +183,10 @@ function Dashboard() {
   const updateStatus = async (a: Appointment, status: Appointment["status"]) => {
     if (status === "concluido") {
       setConcludingAppt(a);
+      return;
+    }
+    if (status === "pendente_pagamento") {
+      setPendingPaymentAppt(a);
       return;
     }
     const { error } = await supabase.from("appointments").update({ status }).eq("id", a.id);
@@ -376,6 +390,12 @@ function Dashboard() {
         onClose={() => setConcludingAppt(null)}
         onSaved={() => { setConcludingAppt(null); load(); }}
       />
+      <PendentePagamentoDialog
+        appt={pendingPaymentAppt}
+        services={services}
+        onClose={() => setPendingPaymentAppt(null)}
+        onSaved={() => { setPendingPaymentAppt(null); load(); }}
+      />
       <AnticipateDialog appts={appts} canceled={anticipateFor} onClose={() => setAnticipateFor(null)} />
     </div>
   );
@@ -389,6 +409,36 @@ const FORMAS_PAGAMENTO: { value: FormaPagamento | "PENDENTE"; label: string }[] 
   { value: "CONVENIO",       label: "Convênio" },
   { value: "PENDENTE",       label: "Pendente — cobrar depois" },
 ];
+
+async function resolverPlanoContas(
+  svc: Service | undefined,
+  userId: string,
+): Promise<string | null> {
+  if (svc?.plano_contas_id) return svc.plano_contas_id;
+  const { data: params } = await supabase
+    .from("parametros")
+    .select("plano_contas_padrao_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (params?.plano_contas_padrao_id) return params.plano_contas_padrao_id;
+  const { data: pc } = await supabase
+    .from("plano_contas")
+    .select("id")
+    .eq("tipo", "RECEITA")
+    .eq("ativo", true)
+    .order("nome")
+    .limit(1)
+    .maybeSingle();
+  return pc?.id ?? null;
+}
+
+async function verificarDuplicata(appointmentId: string): Promise<boolean> {
+  const { count } = await supabase
+    .from("lancamento_financeiro")
+    .select("*", { count: "exact", head: true })
+    .eq("appointment_id", appointmentId);
+  return (count ?? 0) > 0;
+}
 
 function ConcludeDialog({ appt, services, onClose, onSaved }: {
   appt: Appointment | null;
@@ -420,28 +470,16 @@ function ConcludeDialog({ appt, services, onClose, onSaved }: {
     if (apptError) { toast.error(apptError.message); setSaving(false); return; }
 
     const valorNum = Number(valor);
+    const jaExiste = await verificarDuplicata(appt.id);
 
-    // Buscar plano_contas_id: parâmetros do usuário → fallback para primeiro de RECEITA ativo
-    let planoContasId: string | null = null;
-    const { data: params } = await supabase
-      .from("parametros")
-      .select("plano_contas_padrao_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (params?.plano_contas_padrao_id) {
-      planoContasId = params.plano_contas_padrao_id;
-    } else {
-      const { data: pc } = await supabase
-        .from("plano_contas")
-        .select("id")
-        .eq("tipo", "RECEITA")
-        .eq("ativo", true)
-        .order("nome")
-        .limit(1)
-        .maybeSingle();
-      planoContasId = pc?.id ?? null;
+    if (jaExiste) {
+      toast.success("Procedimento concluído. (Lançamento já existia para este agendamento)");
+      setSaving(false);
+      onSaved();
+      return;
     }
+
+    const planoContasId = await resolverPlanoContas(svc, user.id);
 
     if (!planoContasId) {
       toast.error("Nenhuma conta de receita cadastrada. Crie uma em Finanças → Plano de Contas.");
@@ -456,13 +494,15 @@ function ConcludeDialog({ appt, services, onClose, onSaved }: {
 
     const { error: lancError } = await supabase.from("lancamento_financeiro").insert({
       tipo: "RECEITA",
-      descricao: `${appt.service_name ?? "Procedimento"} - ${appt.client_name}`,
+      descricao: appt.service_name ?? "Procedimento",
+      beneficiario: appt.client_name,
       valor: valorNum,
       dt_vencimento: `${dtVencimento}T00:00:00.000Z`,
       status: isPendente ? "PENDENTE" : "PAGO",
       dt_pagamento: isPendente ? null : new Date().toISOString().split("T")[0],
       forma_pagamento: isPendente ? null : formaPagamento,
       plano_contas_id: planoContasId,
+      appointment_id: appt.id,
       created_by: user.id,
     });
 
@@ -515,6 +555,119 @@ function ConcludeDialog({ appt, services, onClose, onSaved }: {
               <Button variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
               <Button className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white" onClick={handleConfirm} disabled={saving || !valor || Number(valor) <= 0}>
                 {saving ? "Salvando..." : "Concluir e lançar"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PendentePagamentoDialog({ appt, services, onClose, onSaved }: {
+  appt: Appointment | null;
+  services: Service[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const { user } = useAuth();
+  const [valor, setValor] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const svc = services.find((s) => s.id === appt?.service_id);
+  const isHof = svc?.is_hof ?? false;
+
+  useEffect(() => {
+    if (appt) {
+      const found = services.find((s) => s.id === appt.service_id);
+      setValor(found ? String(found.price) : "0");
+    }
+  }, [appt, services]);
+
+  const handleConfirm = async () => {
+    if (!appt || !user) return;
+    setSaving(true);
+
+    const { error: apptError } = await supabase
+      .from("appointments")
+      .update({ status: "pendente_pagamento" })
+      .eq("id", appt.id);
+    if (apptError) { toast.error(apptError.message); setSaving(false); return; }
+
+    const jaExiste = await verificarDuplicata(appt.id);
+    if (jaExiste) {
+      toast.success("Status atualizado. (Lançamento já existia para este agendamento)");
+      setSaving(false);
+      onSaved();
+      return;
+    }
+
+    const planoContasId = await resolverPlanoContas(svc, user.id);
+    if (!planoContasId) {
+      toast.warning("Status atualizado. Configure o plano de contas em Finanças → Plano de Contas.");
+      setSaving(false);
+      onSaved();
+      return;
+    }
+
+    const dtVencimento = new Date(appt.scheduled_at).toISOString().split("T")[0];
+
+    const { error: lancError } = await supabase.from("lancamento_financeiro").insert({
+      tipo: "RECEITA",
+      descricao: appt.service_name ?? "Procedimento",
+      beneficiario: appt.client_name,
+      valor: Number(valor),
+      dt_vencimento: `${dtVencimento}T00:00:00.000Z`,
+      status: "PENDENTE",
+      dt_pagamento: null,
+      forma_pagamento: null,
+      plano_contas_id: planoContasId,
+      appointment_id: appt.id,
+      created_by: user.id,
+    });
+
+    if (lancError) {
+      toast.warning(`Status atualizado, mas falha ao criar lançamento: ${lancError.message}`);
+    } else {
+      toast.success("Marcado como pendente de pagamento e lançamento criado!");
+    }
+
+    setSaving(false);
+    onSaved();
+  };
+
+  return (
+    <Dialog open={!!appt} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Clock className="h-5 w-5 text-orange-500" /> Pendente de pagamento
+          </DialogTitle>
+        </DialogHeader>
+        {appt && (
+          <div className="space-y-4">
+            <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+              <div className="font-medium">{appt.client_name}</div>
+              <div className="text-muted-foreground">{appt.service_name ?? "Sem serviço"}</div>
+              {isHof && (
+                <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">
+                  ✨ Procedimento HOF — informe o valor a cobrar
+                </div>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label>{isHof ? "Valor a cobrar (R$)" : "Valor (R$)"}</Label>
+              <Input type="number" step="0.01" min="0" value={valor} onChange={(e) => setValor(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Um lançamento PENDENTE será criado no financeiro.</p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={onClose}>Cancelar</Button>
+              <Button
+                className="flex-1 bg-orange-500 hover:bg-orange-400 text-white"
+                onClick={handleConfirm}
+                disabled={saving || !valor || Number(valor) < 0}
+              >
+                {saving ? "Salvando..." : "Confirmar"}
               </Button>
             </div>
           </div>
@@ -586,6 +739,111 @@ function AnticipateDialog({ appts, canceled, onClose }: { appts: Appointment[]; 
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ServicoSelect({
+  services,
+  value,
+  onChange,
+}: {
+  services: Service[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [aberto, setAberto] = useState(false);
+  const [expandidos, setExpandidos] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    CATEGORIAS_MODAL.forEach((c) => { init[c.value] = true; });
+    return init;
+  });
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function fechar(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    }
+    document.addEventListener("mousedown", fechar);
+    return () => document.removeEventListener("mousedown", fechar);
+  }, []);
+
+  const grupos = CATEGORIAS_MODAL.map((cat) => ({
+    ...cat,
+    services: services.filter((s) => (s.category_group ?? "outros") === cat.value),
+  })).filter((g) => g.services.length > 0);
+
+  const svcSelecionado = value !== "none" ? services.find((s) => s.id === value) : null;
+
+  const toggleGrupo = (v: string) =>
+    setExpandidos((prev) => ({ ...prev, [v]: !prev[v] }));
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        className="flex w-full items-center justify-between rounded-md border bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      >
+        <span className={svcSelecionado ? "text-foreground" : "text-muted-foreground"}>
+          {svcSelecionado ? svcSelecionado.name : "Selecione um serviço..."}
+        </span>
+        <ChevronDown size={15} className={`text-muted-foreground transition-transform duration-150 ${aberto ? "rotate-180" : ""}`} />
+      </button>
+
+      {aberto && (
+        <div className="absolute left-0 right-0 top-full z-[200] mt-1 max-h-72 overflow-y-auto rounded-xl border bg-card shadow-2xl">
+          <button
+            type="button"
+            onClick={() => { onChange("none"); setAberto(false); }}
+            className={`w-full px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/50 ${value === "none" ? "font-medium text-primary" : "text-muted-foreground"}`}
+          >
+            Nenhum
+          </button>
+
+          {grupos.map((grupo) => (
+            <div key={grupo.value}>
+              <button
+                type="button"
+                onClick={() => toggleGrupo(grupo.value)}
+                className="flex w-full items-center justify-between px-3 py-2 hover:bg-muted/30 transition-colors"
+              >
+                <span className="text-sm font-semibold" style={{ color: "#A87C3F" }}>
+                  {grupo.label}
+                </span>
+                <ChevronDown
+                  size={13}
+                  style={{ color: "#C8A56A" }}
+                  className={`transition-transform duration-150 ${expandidos[grupo.value] ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {expandidos[grupo.value] && (
+                <div>
+                  {grupo.services.map((svc) => (
+                    <button
+                      type="button"
+                      key={svc.id}
+                      onClick={() => { onChange(svc.id); setAberto(false); }}
+                      className={`flex w-full items-center justify-between px-5 py-2.5 text-left transition-colors hover:bg-muted/50 ${value === svc.id ? "bg-primary/5 text-primary" : ""}`}
+                    >
+                      <span className="text-sm">{svc.name}</span>
+                      <div className="ml-2 flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
+                        <span>{svc.duration_minutes}min</span>
+                        <span>
+                          {svc.is_hof && Number(svc.price) === 0
+                            ? "Sob avaliação"
+                            : `R$ ${Number(svc.price).toFixed(2)}`}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -709,7 +967,7 @@ function AppointmentDialog({ services, allAppts, editing, businessHours, onClose
   };
 
   return (
-    <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
       <DialogHeader>
         <DialogTitle>{editing ? "Editar agendamento" : "Novo agendamento"}</DialogTitle>
       </DialogHeader>
@@ -749,17 +1007,7 @@ function AppointmentDialog({ services, allAppts, editing, businessHours, onClose
         </div>
         <div className="space-y-1.5">
           <Label>Serviço</Label>
-          <Select value={serviceId} onValueChange={setServiceId}>
-            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Nenhum</SelectItem>
-              {services.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.name} ({s.duration_minutes}min)
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ServicoSelect services={services} value={serviceId} onChange={setServiceId} />
         </div>
         <div className="space-y-1.5">
           <Label>
