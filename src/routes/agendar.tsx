@@ -73,9 +73,10 @@ function isSlotPast(slot: string, date: string, now: Date): boolean {
 }
 
 function AgendarPage() {
+  const clinicUserId = import.meta.env.VITE_CLINIC_USER_ID as string | undefined;
+
   const [services, setServices] = useState<Service[]>([]);
   const [businessHours, setBusinessHours] = useState<BusinessHoursRow[]>([]);
-  const [clinicUserId, setClinicUserId] = useState<string | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
 
   const [name, setName] = useState("");
@@ -101,23 +102,18 @@ function AgendarPage() {
   useEffect(() => {
     (async () => {
       const [
-        { data: svcs,     error: svcsErr },
-        { data: bh,       error: bhErr },
-        { data: userId,   error: userIdErr },
+        { data: svcs, error: svcsErr },
+        { data: bh,   error: bhErr },
       ] = await Promise.all([
         supabase.from("services").select("id,name,duration_minutes,price,is_hof,category_group").eq("active", true).order("category_group").order("name"),
         supabase.from("business_hours").select("weekday,is_open,open_time,close_time,break_start,break_end"),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (supabase as any).rpc("get_clinic_user_id"),
       ]);
 
-      if (svcsErr)   console.error("[agendar] services:", svcsErr.message);
-      if (bhErr)     console.error("[agendar] business_hours:", bhErr.message);
-      if (userIdErr) console.error("[agendar] get_clinic_user_id:", userIdErr.message);
+      if (svcsErr) console.error("[agendar] services:", svcsErr.message);
+      if (bhErr)   console.error("[agendar] business_hours:", bhErr.message);
 
       setServices((svcs as Service[]) ?? []);
       setBusinessHours((bh as BusinessHoursRow[]) ?? []);
-      setClinicUserId(userId as string | null);
       setInitialLoading(false);
     })();
   }, []);
@@ -190,7 +186,7 @@ function AgendarPage() {
     if (!date)                                  return setFormError("Selecione uma data.");
     if (!time)                                  return setFormError("Selecione um horário.");
     if (isSlotPast(time, date, now))            return setFormError("Este horário já passou. Escolha outro.");
-    if (!clinicUserId)                          return setFormError("Não foi possível identificar a clínica. Tente novamente mais tarde.");
+    if (!clinicUserId)                          return setFormError("Configuração da clínica não encontrada.");
 
     setSaving(true);
     const svc = services.find((s) => s.id === serviceId);
