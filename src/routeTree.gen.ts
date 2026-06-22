@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AgendarRouteImport } from './routes/agendar'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppSlotsRouteImport } from './routes/_app/slots'
@@ -29,6 +30,11 @@ import { Route as AppConfigUsuariosRouteImport } from './routes/_app/config.usua
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgendarRoute = AgendarRouteImport.update({
+  id: '/agendar',
+  path: '/agendar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -108,6 +114,7 @@ const AppConfigUsuariosRoute = AppConfigUsuariosRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agendar': typeof AgendarRoute
   '/auth': typeof AuthRoute
   '/balance': typeof AppBalanceRoute
   '/categories': typeof AppCategoriesRoute
@@ -125,6 +132,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agendar': typeof AgendarRoute
   '/auth': typeof AuthRoute
   '/balance': typeof AppBalanceRoute
   '/categories': typeof AppCategoriesRoute
@@ -144,6 +152,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/agendar': typeof AgendarRoute
   '/auth': typeof AuthRoute
   '/_app/balance': typeof AppBalanceRoute
   '/_app/categories': typeof AppCategoriesRoute
@@ -163,6 +172,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/agendar'
     | '/auth'
     | '/balance'
     | '/categories'
@@ -180,6 +190,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/agendar'
     | '/auth'
     | '/balance'
     | '/categories'
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/agendar'
     | '/auth'
     | '/_app/balance'
     | '/_app/categories'
@@ -217,6 +229,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  AgendarRoute: typeof AgendarRoute
   AuthRoute: typeof AuthRoute
 }
 
@@ -227,6 +240,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agendar': {
+      id: '/agendar'
+      path: '/agendar'
+      fullPath: '/agendar'
+      preLoaderRoute: typeof AgendarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -374,6 +394,7 @@ const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  AgendarRoute: AgendarRoute,
   AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
