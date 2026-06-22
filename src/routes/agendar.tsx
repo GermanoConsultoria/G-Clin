@@ -73,7 +73,7 @@ function isSlotPast(slot: string, date: string, now: Date): boolean {
 }
 
 function AgendarPage() {
-  const clinicUserId = import.meta.env.VITE_CLINIC_USER_ID as string | undefined;
+  const clinicUserId = import.meta.env.VITE_CLINIC_USER_ID ?? 'b3acc6c6-1ecd-4a20-889b-66b806408f58';
 
   const [services, setServices] = useState<Service[]>([]);
   const [businessHours, setBusinessHours] = useState<BusinessHoursRow[]>([]);
