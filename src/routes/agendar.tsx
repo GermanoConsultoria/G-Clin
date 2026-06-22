@@ -100,14 +100,24 @@ function AgendarPage() {
 
   useEffect(() => {
     (async () => {
-      const [{ data: svcs }, { data: bh }, { data: settings }] = await Promise.all([
+      const [
+        { data: svcs,     error: svcsErr },
+        { data: bh,       error: bhErr },
+        { data: userId,   error: userIdErr },
+      ] = await Promise.all([
         supabase.from("services").select("id,name,duration_minutes,price,is_hof,category_group").eq("active", true).order("category_group").order("name"),
         supabase.from("business_hours").select("weekday,is_open,open_time,close_time,break_start,break_end"),
-        supabase.from("clinic_settings").select("user_id").limit(1).maybeSingle(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).rpc("get_clinic_user_id"),
       ]);
+
+      if (svcsErr)   console.error("[agendar] services:", svcsErr.message);
+      if (bhErr)     console.error("[agendar] business_hours:", bhErr.message);
+      if (userIdErr) console.error("[agendar] get_clinic_user_id:", userIdErr.message);
+
       setServices((svcs as Service[]) ?? []);
       setBusinessHours((bh as BusinessHoursRow[]) ?? []);
-      setClinicUserId(settings?.user_id ?? null);
+      setClinicUserId(userId as string | null);
       setInitialLoading(false);
     })();
   }, []);
@@ -127,7 +137,7 @@ function AgendarPage() {
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  // Fetch existing appointments for the selected day
+  // Fetch existing appointments for the selected day (to check slot availability)
   useEffect(() => {
     if (!date) { setDayAppts([]); setTime(""); return; }
     setLoadingSlots(true);
@@ -137,7 +147,8 @@ function AgendarPage() {
       .gte("scheduled_at", `${date}T00:00:00`)
       .lte("scheduled_at", `${date}T23:59:59`)
       .in("status", ["agendado", "confirmado", "concluido", "pendente_pagamento"])
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error("[agendar] appointments:", error.message);
         setDayAppts((data as DayAppt[]) ?? []);
         setTime("");
         setLoadingSlots(false);
