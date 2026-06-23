@@ -8,7 +8,6 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import gtechLogo from "@/assets/g-tech-logo.png";
-import logoGabriela from "@/assets/logo_gabriela.jpeg";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
@@ -34,7 +33,6 @@ const configItems = [
   { to: "/categories",      label: "Categorias", icon: FolderHeart },
 ] as const;
 
-// Componente auxiliar para renderizar os links de forma padronizada
 function NavItem({ 
   item, pathname, isCollapsed, setMobileOpen 
 }: { 
@@ -94,22 +92,11 @@ function AppLayout() {
           ${isCollapsed ? "lg:w-20" : "lg:w-72"}
         `}
       >
-        {/* Cabeçalho da Sidebar (Logo & Hamburger) */}
-        <div className="flex h-20 items-center justify-between px-4 border-b border-[#C8A56A]/10">
-          <div className={`flex items-center gap-3 overflow-hidden transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 hidden lg:flex" : "opacity-100 w-auto"}`}>
-            <img
-              src={logoGabriela}
-              alt="Dra. Gabriela"
-              className="h-10 w-10 shrink-0 rounded-full border border-[#C8A56A] object-cover"
-            />
-            <div className="flex flex-col">
-              <span className="font-display text-sm font-bold text-[#A87C3F] whitespace-nowrap">Dra. Gabriela</span>
-            </div>
-          </div>
-          
+        {/* Cabeçalho da Sidebar */}
+        <div className="flex h-20 items-center justify-start px-4 border-b border-[#C8A56A]/10">
           {/* Botão Hamburger Desktop */}
           <button
-            className="hidden lg:flex p-2 rounded-md text-[#A87C3F] hover:bg-black/5 transition-colors mx-auto"
+            className="hidden lg:flex p-2 rounded-md text-[#A87C3F] hover:bg-black/5 transition-colors"
             onClick={() => setIsCollapsed(!isCollapsed)}
           >
             <Menu className="h-6 w-6" />
@@ -127,7 +114,6 @@ function AppLayout() {
         {/* Navegação */}
         <nav className="custom-scrollbar flex-1 overflow-y-auto overflow-x-hidden px-3 py-6 flex flex-col gap-2">
           
-          {/* Menu Principal */}
           {mainNavItems.map((item) => (
             <NavItem 
               key={item.to} 
@@ -140,7 +126,6 @@ function AppLayout() {
 
           <div className="my-2 border-t border-[#C8A56A]/20" />
 
-          {/* Módulo Financeiro */}
           {!isCollapsed && <span className="px-4 text-xs font-bold text-[#A87C3F]/60 uppercase tracking-wider mt-2 mb-1">Finanças</span>}
           {financeItems.map((item) => (
             <NavItem 
@@ -154,7 +139,6 @@ function AppLayout() {
 
           <div className="my-2 border-t border-[#C8A56A]/20" />
 
-          {/* Módulo Sistema */}
           {!isCollapsed && <span className="px-4 text-xs font-bold text-[#A87C3F]/60 uppercase tracking-wider mt-2 mb-1">Sistema</span>}
           {configItems.map((item) => (
             <NavItem 
@@ -168,7 +152,7 @@ function AppLayout() {
 
         </nav>
 
-        {/* Rodapé da Sidebar (Botão de Sair) */}
+        {/* Rodapé da Sidebar */}
         <div className="border-t border-[#C8A56A]/20 p-3">
           <button
             onClick={() => supabase.auth.signOut().then(() => nav({ to: "/" }))}
@@ -186,12 +170,8 @@ function AppLayout() {
       {/* Área Principal */}
       <div className="flex flex-1 flex-col overflow-hidden h-screen">
         
-        {/* Header Mobile (Aparece apenas se a sidebar estiver oculta no Mobile) */}
-        <header className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden shadow-sm">
-          <div className="flex items-center gap-3 font-display font-bold text-[#A87C3F]">
-             <img src={logoGabriela} alt="Dra. Gabriela" className="h-9 w-9 rounded-full border border-[#C8A56A] object-cover" />
-             Dra. Gabriela
-          </div>
+        {/* Header Mobile */}
+        <header className="flex h-16 items-center justify-end border-b bg-white px-4 lg:hidden shadow-sm">
           <button
             onClick={() => setMobileOpen(true)}
             className="rounded-md p-2 text-[#A87C3F] hover:bg-gray-100 transition-colors"
