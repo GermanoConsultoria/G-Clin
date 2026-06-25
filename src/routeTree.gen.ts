@@ -19,12 +19,14 @@ import { Route as AppReceivablesRouteImport } from './routes/_app/receivables'
 import { Route as AppPlansRouteImport } from './routes/_app/plans'
 import { Route as AppPendingPaymentsRouteImport } from './routes/_app/pending-payments'
 import { Route as AppPayablesRouteImport } from './routes/_app/payables'
+import { Route as AppPacientesRouteImport } from './routes/_app/pacientes'
 import { Route as AppOverviewRouteImport } from './routes/_app/overview'
 import { Route as AppHoursRouteImport } from './routes/_app/hours'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppChartAccountsRouteImport } from './routes/_app/chart-accounts'
 import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
 import { Route as AppBalanceRouteImport } from './routes/_app/balance'
+import { Route as AppPacientesPacienteIdRouteImport } from './routes/_app/pacientes.$pacienteId'
 import { Route as AppConfigUsuariosRouteImport } from './routes/_app/config.usuarios'
 
 const AuthRoute = AuthRouteImport.update({
@@ -76,6 +78,11 @@ const AppPayablesRoute = AppPayablesRouteImport.update({
   path: '/payables',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPacientesRoute = AppPacientesRouteImport.update({
+  id: '/pacientes',
+  path: '/pacientes',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppOverviewRoute = AppOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
@@ -106,6 +113,11 @@ const AppBalanceRoute = AppBalanceRouteImport.update({
   path: '/balance',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPacientesPacienteIdRoute = AppPacientesPacienteIdRouteImport.update({
+  id: '/$pacienteId',
+  path: '/$pacienteId',
+  getParentRoute: () => AppPacientesRoute,
+} as any)
 const AppConfigUsuariosRoute = AppConfigUsuariosRouteImport.update({
   id: '/config/usuarios',
   path: '/config/usuarios',
@@ -122,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
+  '/pacientes': typeof AppPacientesRouteWithChildren
   '/payables': typeof AppPayablesRoute
   '/pending-payments': typeof AppPendingPaymentsRoute
   '/plans': typeof AppPlansRoute
@@ -129,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/services': typeof AppServicesRoute
   '/slots': typeof AppSlotsRoute
   '/config/usuarios': typeof AppConfigUsuariosRoute
+  '/pacientes/$pacienteId': typeof AppPacientesPacienteIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -140,6 +154,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/hours': typeof AppHoursRoute
   '/overview': typeof AppOverviewRoute
+  '/pacientes': typeof AppPacientesRouteWithChildren
   '/payables': typeof AppPayablesRoute
   '/pending-payments': typeof AppPendingPaymentsRoute
   '/plans': typeof AppPlansRoute
@@ -147,6 +162,7 @@ export interface FileRoutesByTo {
   '/services': typeof AppServicesRoute
   '/slots': typeof AppSlotsRoute
   '/config/usuarios': typeof AppConfigUsuariosRoute
+  '/pacientes/$pacienteId': typeof AppPacientesPacienteIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -160,6 +176,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/hours': typeof AppHoursRoute
   '/_app/overview': typeof AppOverviewRoute
+  '/_app/pacientes': typeof AppPacientesRouteWithChildren
   '/_app/payables': typeof AppPayablesRoute
   '/_app/pending-payments': typeof AppPendingPaymentsRoute
   '/_app/plans': typeof AppPlansRoute
@@ -167,6 +184,7 @@ export interface FileRoutesById {
   '/_app/services': typeof AppServicesRoute
   '/_app/slots': typeof AppSlotsRoute
   '/_app/config/usuarios': typeof AppConfigUsuariosRoute
+  '/_app/pacientes/$pacienteId': typeof AppPacientesPacienteIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -180,6 +198,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/hours'
     | '/overview'
+    | '/pacientes'
     | '/payables'
     | '/pending-payments'
     | '/plans'
@@ -187,6 +206,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/slots'
     | '/config/usuarios'
+    | '/pacientes/$pacienteId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -198,6 +218,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/hours'
     | '/overview'
+    | '/pacientes'
     | '/payables'
     | '/pending-payments'
     | '/plans'
@@ -205,6 +226,7 @@ export interface FileRouteTypes {
     | '/services'
     | '/slots'
     | '/config/usuarios'
+    | '/pacientes/$pacienteId'
   id:
     | '__root__'
     | '/'
@@ -217,6 +239,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/hours'
     | '/_app/overview'
+    | '/_app/pacientes'
     | '/_app/payables'
     | '/_app/pending-payments'
     | '/_app/plans'
@@ -224,6 +247,7 @@ export interface FileRouteTypes {
     | '/_app/services'
     | '/_app/slots'
     | '/_app/config/usuarios'
+    | '/_app/pacientes/$pacienteId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -305,6 +329,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPayablesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/pacientes': {
+      id: '/_app/pacientes'
+      path: '/pacientes'
+      fullPath: '/pacientes'
+      preLoaderRoute: typeof AppPacientesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/overview': {
       id: '/_app/overview'
       path: '/overview'
@@ -347,6 +378,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBalanceRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/pacientes/$pacienteId': {
+      id: '/_app/pacientes/$pacienteId'
+      path: '/$pacienteId'
+      fullPath: '/pacientes/$pacienteId'
+      preLoaderRoute: typeof AppPacientesPacienteIdRouteImport
+      parentRoute: typeof AppPacientesRoute
+    }
     '/_app/config/usuarios': {
       id: '/_app/config/usuarios'
       path: '/config/usuarios'
@@ -357,6 +395,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AppPacientesRouteChildren {
+  AppPacientesPacienteIdRoute: typeof AppPacientesPacienteIdRoute
+}
+
+const AppPacientesRouteChildren: AppPacientesRouteChildren = {
+  AppPacientesPacienteIdRoute: AppPacientesPacienteIdRoute,
+}
+
+const AppPacientesRouteWithChildren = AppPacientesRoute._addFileChildren(
+  AppPacientesRouteChildren,
+)
+
 interface AppRouteChildren {
   AppBalanceRoute: typeof AppBalanceRoute
   AppCategoriesRoute: typeof AppCategoriesRoute
@@ -364,6 +414,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppHoursRoute: typeof AppHoursRoute
   AppOverviewRoute: typeof AppOverviewRoute
+  AppPacientesRoute: typeof AppPacientesRouteWithChildren
   AppPayablesRoute: typeof AppPayablesRoute
   AppPendingPaymentsRoute: typeof AppPendingPaymentsRoute
   AppPlansRoute: typeof AppPlansRoute
@@ -380,6 +431,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppHoursRoute: AppHoursRoute,
   AppOverviewRoute: AppOverviewRoute,
+  AppPacientesRoute: AppPacientesRouteWithChildren,
   AppPayablesRoute: AppPayablesRoute,
   AppPendingPaymentsRoute: AppPendingPaymentsRoute,
   AppPlansRoute: AppPlansRoute,

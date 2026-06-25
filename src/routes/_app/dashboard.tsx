@@ -189,8 +189,38 @@ function Dashboard() {
       setPendingPaymentAppt(a);
       return;
     }
+
     const { error } = await supabase.from("appointments").update({ status }).eq("id", a.id);
     if (error) return toast.error(error.message);
+
+    // Ao confirmar, cria o paciente automaticamente se ainda não existir
+    if (status === "confirmado") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const db = supabase as any;
+
+      const { data: existente } = await db
+        .from("pacientes")
+        .select("id")
+        .eq("user_id", user!.id)
+        .ilike("nome", a.client_name.trim())
+        .maybeSingle();
+
+      if (!existente) {
+        const { error: pacErr } = await db.from("pacientes").insert({
+          user_id: user!.id,
+          nome: a.client_name.trim(),
+          telefone: a.phone,
+        });
+        if (pacErr) {
+          toast.warning("Agendamento confirmado, mas falha ao criar paciente: " + pacErr.message);
+        } else {
+          toast.success("Agendamento confirmado e paciente adicionado!");
+        }
+      } else {
+        toast.success("Agendamento confirmado!");
+      }
+    }
+
     if (status === "cancelado") setAnticipateFor({ ...a, status });
     load();
   };
