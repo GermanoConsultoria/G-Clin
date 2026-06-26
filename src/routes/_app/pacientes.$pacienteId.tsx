@@ -614,6 +614,15 @@ function PacienteDetalhe() {
     setArquivos((p) => p.filter((a) => a.id !== id));
   }
 
+  async function handleVisualizar(url: string) {
+    const path = url.split("/arquivos-pacientes/")[1];
+    const { data, error } = await supabase.storage
+      .from("arquivos-pacientes")
+      .createSignedUrl(path, 3600);
+    if (error || !data) { toast.error("Erro ao abrir arquivo"); return; }
+    window.open(data.signedUrl, "_blank");
+  }
+
   if (loading) return (
     <div className="flex h-64 items-center justify-center">
       <Loader2 className="h-8 w-8 animate-spin text-[#C8A56A]" />
@@ -809,7 +818,7 @@ function PacienteDetalhe() {
                   </div>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => window.open(a.url, "_blank")}
+                      onClick={() => handleVisualizar(a.url)}
                       className="rounded-lg p-1.5 text-[#A87C3F] hover:bg-[#C8A56A]/10"
                       title="Visualizar"
                     >
