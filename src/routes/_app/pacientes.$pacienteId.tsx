@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import jsPDF from "jspdf";
 import logoGabriela from "@/assets/logo_gabriela.jpeg";
 import {
-  ArrowLeft, FileText, Upload, Trash2, Download,
+  ArrowLeft, FileText, Upload, Trash2, Download, Eye,
   Loader2, FilePlus, ClipboardList, FolderOpen, X,
   CheckCircle2, Phone, Mail, MapPin, Cake, Plus,
 } from "lucide-react";
@@ -808,12 +808,19 @@ function PacienteDetalhe() {
                     <p className="text-xs text-muted-foreground">{fmt(a.created_at)} · {fmtBytes(a.tamanho)}</p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => window.open(a.url, "_blank")}
+                      className="rounded-lg p-1.5 text-[#A87C3F] hover:bg-[#C8A56A]/10"
+                      title="Visualizar"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
                     <a
                       href={a.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="rounded-lg p-1.5 text-[#A87C3F] hover:bg-[#C8A56A]/10"
-                      title="Baixar / Visualizar"
+                      title="Baixar"
                     >
                       <Download className="h-4 w-4" />
                     </a>
