@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import jsPDF from "jspdf";
+import logoGabriela from "@/assets/logo_gabriela.jpeg";
 import {
   ArrowLeft, FileText, Upload, Trash2, Download,
   Loader2, FilePlus, ClipboardList, FolderOpen, X,
@@ -162,6 +163,393 @@ function fmtCPF(raw: string): string {
   return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
+// ── Geração de PDF (módulo — pode ser chamada de fora do modal) ──────────────
+async function gerarPDF(formData: FichaData, paciente: Paciente): Promise<void> {
+  const str  = (k: string) => (formData[k] as string) ?? "";
+  const bool = (k: string) => !!formData[k];
+
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+
+  // ── Carrega logo como base64 via canvas ──────────────────────────────
+  const img = new Image();
+  img.src = logoGabriela;
+  await new Promise<void>(resolve => { img.onload = () => resolve(); });
+  const canvas = document.createElement("canvas");
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext("2d");
+  ctx!.fillStyle = "#FFFFFF";
+  ctx!.fillRect(0, 0, canvas.width, canvas.height);
+  ctx!.drawImage(img, 0, 0);
+  const logoBase64 = canvas.toDataURL("image/jpeg", 1.0);
+
+  // ── Layout constants ──────────────────────────────────────────────────
+  const PW = 210, PH = 297;
+  const ML = 15, MR = 15, MT = 15;
+  const CW = PW - ML - MR;
+  const BODY_MAX = PH - 18;
+  const FOOTER_LINE = PH - 12; // eslint-disable-line @typescript-eslint/no-unused-vars
+  const FOOTER_TXT  = PH - 8;  // eslint-disable-line @typescript-eslint/no-unused-vars
+  const CB = 3.2;
+
+  // ── Color palette (RGB) ──────────────────────────────────────────────
+  const GOLD   = [168, 124, 63]  as const;
+  const GOLD_S = [249, 243, 232] as const;
+  const TEXT   = [51,  51,  51]  as const;
+  const LABEL  = [102, 102, 102] as const;
+  const BLACK  = [0,   0,   0]   as const;
+  const LGRAY  = [200, 200, 200] as const;
+
+  let y = MT;
+
+  const tc = (c: readonly [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
+  const fc = (c: readonly [number, number, number]) => doc.setFillColor(c[0], c[1], c[2]);
+  const dc = (c: readonly [number, number, number]) => doc.setDrawColor(c[0], c[1], c[2]);
+
+  const dataAvStr = str("data_avaliacao");
+  const dataAvFmt = dataAvStr
+    ? format(parseISO(dataAvStr), "dd/MM/yyyy", { locale: ptBR })
+    : "—";
+
+  function guard(h: number) {
+    if (y + h > BODY_MAX) {
+      doc.addPage();
+      y = MT;
+      miniHeader();
+    }
+  }
+
+  function miniHeader() {
+    doc.setFontSize(10); doc.setFont("helvetica", "bold"); tc(GOLD);
+    doc.text("Ficha de Avaliação Geral — Dra. Gabriela Oliveira", ML, y);
+    doc.setFontSize(8); doc.setFont("helvetica", "normal"); tc(LABEL);
+    doc.text(`Data: ${dataAvFmt}`, PW - MR, y, { align: "right" });
+    y += 3;
+    dc(GOLD); doc.setLineWidth(0.3);
+    doc.line(ML, y, PW - MR, y);
+    y += 6;
+  }
+
+  function drawFooters() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const total   = (doc as any).internal?.getNumberOfPages?.() ?? 1;
+    const gerado  = format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const pageH   = (doc as any).internal.pageSize.getHeight() as number;
+    const footerY = pageH - 15;
+    const infoY   = footerY - 8;
+    const GRAY88  = [136, 136, 136] as const;
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      if (i === total) {
+        doc.setFontSize(8); doc.setFont("helvetica", "normal"); tc(GRAY88);
+        doc.text(
+          "R. Faustino Custódio dos Santos, 160 - Parque Cidade Nova, Mogi Guaçu - SP, 13845-425",
+          PW / 2, infoY, { align: "center" }
+        );
+        doc.text("Instagram: @dra.gabrielaoliveiraa_", PW / 2, infoY + 4, { align: "center" });
+      }
+      dc(LGRAY); doc.setLineWidth(0.2);
+      doc.line(ML, footerY, PW - MR, footerY);
+      doc.setFontSize(7); doc.setFont("helvetica", "normal"); tc(LABEL);
+      doc.text(`Gerado em: ${gerado}`, ML, footerY + 4);
+      doc.text(`Página ${i} de ${total}`, PW - MR, footerY + 4, { align: "right" });
+    }
+  }
+
+  function secao(titulo: string) {
+    guard(14);
+    y += 3;
+    fc(GOLD_S); dc(GOLD_S);
+    doc.rect(ML, y - 5.5, CW, 7.5, "F");
+    doc.setFontSize(10); doc.setFont("helvetica", "bold"); tc(GOLD);
+    doc.text(titulo.toUpperCase(), ML + 2, y);
+    y += 6;
+    tc(TEXT);
+  }
+
+  function f(label: string, valor: string | boolean | null | undefined, indent = 0) {
+    let v: string;
+    if (typeof valor === "boolean") v = valor ? "Sim" : "Não";
+    else v = (valor as string | null | undefined) || "—";
+    const x = ML + indent;
+    const w = CW - indent;
+    doc.setFontSize(8.5); doc.setFont("helvetica", "bold"); tc(LABEL);
+    const lbl = `${label}: `;
+    const lw = doc.getTextWidth(lbl);
+    const lines = doc.splitTextToSize(v, w - lw) as string[];
+    guard(lines.length * 4.5 + 1.5);
+    doc.text(lbl, x, y);
+    doc.setFont("helvetica", "normal"); tc(BLACK);
+    for (let i = 0; i < lines.length; i++) {
+      if (i > 0) { y += 4.5; guard(5); }
+      doc.text(lines[i], x + lw, y);
+    }
+    y += 5;
+  }
+
+  function f2(
+    l1: string, v1: string | null | undefined,
+    l2: string, v2: string | null | undefined,
+  ) {
+    guard(6);
+    const col = CW / 2 - 2;
+    doc.setFontSize(8.5);
+    ([{ l: l1, v: v1, x: ML }, { l: l2, v: v2, x: ML + CW / 2 }] as const).forEach(({ l, v, x }) => {
+      const lbl = `${l}: `;
+      doc.setFont("helvetica", "bold"); tc(LABEL);
+      const lw = doc.getTextWidth(lbl);
+      doc.text(lbl, x, y);
+      doc.setFont("helvetica", "normal"); tc(BLACK);
+      doc.text((doc.splitTextToSize(v || "—", col - lw) as string[])[0], x + lw, y);
+    });
+    y += 5;
+  }
+
+  function f3(
+    l1: string, v1: string | null | undefined,
+    l2: string, v2: string | null | undefined,
+    l3: string, v3: string | null | undefined,
+  ) {
+    guard(6);
+    const col = CW / 3 - 2;
+    doc.setFontSize(8.5);
+    ([
+      { l: l1, v: v1, x: ML },
+      { l: l2, v: v2, x: ML + CW / 3 },
+      { l: l3, v: v3, x: ML + (CW * 2) / 3 },
+    ] as const).forEach(({ l, v, x }) => {
+      const lbl = `${l}: `;
+      doc.setFont("helvetica", "bold"); tc(LABEL);
+      const lw = doc.getTextWidth(lbl);
+      doc.text(lbl, x, y);
+      doc.setFont("helvetica", "normal"); tc(BLACK);
+      doc.text((doc.splitTextToSize(v || "—", col - lw) as string[])[0], x + lw, y);
+    });
+    y += 5;
+  }
+
+  function yn(label: string, key: string, subKey?: string, subLabel = "Qual") {
+    const v = bool(key);
+    const CBX = PW - MR - 26;
+    doc.setFontSize(8.5);
+    const lblLines = doc.splitTextToSize(label, CBX - ML - 2) as string[];
+    guard(lblLines.length * 4.5 + (v && subKey ? 5.5 : 1));
+    doc.setFont("helvetica", "normal"); tc(TEXT);
+    doc.text(lblLines[0], ML, y);
+    dc([130, 130, 130]); doc.setLineWidth(0.25);
+    doc.rect(CBX, y - CB + 0.4, CB, CB);
+    if (v) {
+      doc.setFontSize(7); doc.setFont("helvetica", "bold"); tc([0, 130, 0]);
+      doc.text("X", CBX + 0.55, y - 0.15);
+    }
+    doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); tc(TEXT);
+    doc.text("Sim", CBX + CB + 1, y);
+    const CBX2 = CBX + 13;
+    dc([130, 130, 130]);
+    doc.rect(CBX2, y - CB + 0.4, CB, CB);
+    if (!v) {
+      doc.setFontSize(7); doc.setFont("helvetica", "bold"); tc([190, 0, 0]);
+      doc.text("X", CBX2 + 0.55, y - 0.15);
+    }
+    doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); tc(TEXT);
+    doc.text("Não", CBX2 + CB + 1, y);
+    for (let i = 1; i < lblLines.length; i++) {
+      y += 4.5; guard(5);
+      doc.text(lblLines[i], ML, y);
+    }
+    y += 5;
+    if (v && subKey) {
+      const sv = str(subKey) || "—";
+      guard(5);
+      doc.setFontSize(8);
+      const sublbl = `${subLabel}: `;
+      doc.setFont("helvetica", "bold"); tc(LABEL);
+      const slw = doc.getTextWidth(sublbl);
+      doc.text(sublbl, ML + 6, y);
+      doc.setFont("helvetica", "normal"); tc(BLACK);
+      doc.text((doc.splitTextToSize(sv, CW - 6 - slw) as string[])[0], ML + 6 + slw, y);
+      y += 5;
+      doc.setFontSize(8.5);
+    }
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // CABEÇALHO — PÁGINA 1
+  // ════════════════════════════════════════════════════════════════════════
+
+  doc.addImage(logoBase64, "JPEG", 10, 8, 25, 25);
+  const TITLE_LEFT = 38;
+  const TITLE_CX   = TITLE_LEFT + (PW - MR - TITLE_LEFT) / 2;
+  doc.setFontSize(16); doc.setFont("helvetica", "bold"); tc(GOLD);
+  doc.text("Ficha de Avaliação Geral", TITLE_CX, 20, { align: "center" });
+  doc.setFontSize(11); doc.setFont("helvetica", "normal"); tc(LABEL);
+  doc.text("Dra. Gabriela Oliveira", TITLE_CX, 28, { align: "center" });
+  doc.setFontSize(9); tc(TEXT);
+  doc.text(`Data: ${dataAvFmt}`, PW - MR, 34, { align: "right" });
+  y = 36;
+  dc(GOLD); doc.setLineWidth(0.6);
+  doc.line(ML, y, PW - MR, y);
+  y += 8;
+
+  // ════════════════════════════════════════════════════════════════════════
+  // DADOS PESSOAIS
+  // ════════════════════════════════════════════════════════════════════════
+  secao("Dados Pessoais");
+  f2("Nome", paciente.nome, "Idade", calcIdade(paciente.data_nasc));
+  f("Endereço", paciente.endereco);
+  f3("CEP", paciente.cep, "Bairro", paciente.bairro,
+    "Cidade / Estado", [paciente.cidade, paciente.estado].filter(Boolean).join(" / ") || null);
+  f3("Tel. Residencial", str("telefone_residencial") || null,
+    "Tel. Comercial",  str("telefone_comercial")    || null,
+    "Celular",         fmtCelular(paciente.telefone ?? "") || null);
+  f3("Data de Nasc.", paciente.data_nasc ? fmt(paciente.data_nasc) : null,
+    "CPF",       fmtCPF(paciente.cpf ?? "") || null,
+    "Profissão", paciente.profissao);
+  f2("Estado Civil", paciente.estado_civil, "E-mail", paciente.email);
+  y += 2;
+
+  // ════════════════════════════════════════════════════════════════════════
+  // QUEIXA PRINCIPAL
+  // ════════════════════════════════════════════════════════════════════════
+  secao("Queixa Principal");
+  f2("Queixa", str("queixa") || null, "Duração", str("duracao_queixa") || null);
+  y += 2;
+
+  // ════════════════════════════════════════════════════════════════════════
+  // HÁBITOS DIÁRIOS
+  // ════════════════════════════════════════════════════════════════════════
+  secao("Hábitos Diários");
+  yn("Tratamento estético anterior?",  "trat_estetico_anterior", "trat_estetico_qual");
+  yn("Usa lentes de contato?",          "usa_lente_contato");
+  yn("Utilização de cosméticos?",       "usa_cosmeticos",   "cosmeticos_qual");
+  yn("Exposição ao sol?",               "exposicao_sol");
+  yn("Filtro solar?",                   "filtro_solar",     "filtro_solar_frequencia", "Frequência");
+  yn("Tabagismo?",                      "tabagismo",        "tabagismo_quantidade",    "Cigarros/dia");
+  yn("Ingere bebida alcoólica?",        "alcool",           "alcool_frequencia",       "Frequência");
+  f("Funcionamento intestinal",          str("funcionamento_intestinal"));
+  f2("Qualidade do sono",               str("qualidade_sono")  || null,
+     "Horas de sono/noite",             str("horas_sono")      || null);
+  yn("Passa muito tempo em pé e/ou sentada?", "muito_tempo_pe_sentada", "quanto_tempo_pe_sentada", "Quanto tempo");
+  f("Ingestão de água (copos/dia)",      str("ingestao_agua_copos"));
+  f2("Tipo de alimentação",             str("tipo_alimentacao")      || null,
+     "Alimentos de preferência",        str("alimentos_preferencia") || null);
+  yn("Pratica atividade física?",        "atividade_fisica");
+  if (bool("atividade_fisica")) {
+    f2("Tipo de atividade", str("atividade_fisica_tipo") || null,
+       "Frequência",        str("atividade_fisica_frequencia") || null);
+  }
+  yn("Uso de anticoncepcional?",         "anticoncepcional", "anticoncepcional_qual");
+  f("Data do 1º dia da última menstruação",
+    str("dt_ultima_menstruacao") ? fmt(str("dt_ultima_menstruacao")) : null);
+  yn("Gestante?",                        "gestante");
+  yn("Gestações anteriores?",            "gestacoes");
+  if (bool("gestacoes")) {
+    f2("Quantas",         str("gestacoes_quantas") || null,
+       "Há quanto tempo", str("gestacoes_tempo")   || null);
+  }
+  y += 2;
+
+  // ════════════════════════════════════════════════════════════════════════
+  // HISTÓRICO CLÍNICO
+  // ════════════════════════════════════════════════════════════════════════
+  secao("Histórico Clínico");
+  yn("Tratamento médico atual?",                      "tratamento_medico_atual",    "medicamentos_uso",               "Medicamentos em uso");
+  yn("Uso de anticoagulantes?",                       "uso_anticoagulantes",        "anticoagulantes_quais",          "Quais");
+  yn("Antecedentes alérgicos?",                       "antecedentes_alergicos",     "alergias_quais",                 "Quais");
+  yn("Reação alérgica a anestésicos? (ex.: lidocaína)","alergia_anestesico");
+  yn("Portador de marcapasso?",                       "marcapasso");
+  yn("Alterações cardíacas?",                         "alteracoes_cardiacas",       "alteracoes_cardiacas_quais",     "Quais");
+  yn("Hipo/hipertensão arterial?",                    "hipo_hipertensao");
+  yn("Distúrbio circulatório?",                       "disturbio_circulatorio",     "disturbio_circulatorio_qual",   "Qual");
+  yn("Distúrbio renal?",                              "disturbio_renal",            "disturbio_renal_qual",          "Qual");
+  yn("Distúrbio hormonal?",                           "disturbio_hormonal",         "disturbio_hormonal_qual",       "Qual");
+  yn("Distúrbio gastro-intestinal?",                  "disturbio_gastro",           "disturbio_gastro_qual",         "Qual");
+  yn("Epilepsia / convulsões?",                       "epilepsia",                  "epilepsia_frequencia",          "Frequência");
+  yn("Alterações psicológicas / psiquiátricas?",      "alteracoes_psicologicas",    "alteracoes_psicologicas_quais", "Quais");
+  yn("Estresse?",                                     "estresse",                   "estresse_obs",                  "Observações");
+  yn("Antecedentes oncológicos?",                     "antecedentes_oncologicos",   "antecedentes_oncologicos_qual", "Qual");
+  yn("Diabetes?",                                     "diabetes",                   "diabetes_tipo",                 "Tipo");
+  yn("Doença autoimune?",                             "doenca_autoimune",           "doenca_autoimune_qual",         "Qual");
+  yn("Soropositivo?",                                 "soropositivo");
+  f("Outra condição / doença pré-existente",           str("outra_condicao"));
+  f("Data do último Check-Up",
+    str("dt_ultimo_checkup") ? fmt(str("dt_ultimo_checkup")) : null);
+  y += 2;
+
+  // ════════════════════════════════════════════════════════════════════════
+  // TRATAMENTO ESTÉTICO / CIRÚRGICO
+  // ════════════════════════════════════════════════════════════════════════
+  secao("Tratamento da Medicina Estética e Cirúrgica");
+  yn("Próteses metálicas?",               "proteses_metalicas",   "proteses_metalicas_qual",  "Qual");
+  yn("Implante dentário?",                "implante_dentario");
+  yn("Tratamento dermatológico / estético?","trat_dermatologico",  "trat_dermatologico_qual",  "Qual");
+  yn("Cirurgia plástica estética?",        "cirurgia_plastica",    "cirurgia_plastica_qual",   "Qual");
+  yn("Cirurgia reparadora?",               "cirurgia_reparadora",  "cirurgia_reparadora_qual", "Qual");
+  y += 2;
+
+  // ════════════════════════════════════════════════════════════════════════
+  // AUTORIZAÇÃO
+  // ════════════════════════════════════════════════════════════════════════
+  secao("Autorização");
+  const textoAuth = "Me responsabilizo pelo questionário e autorizo a realização dos procedimentos descritos anteriormente, afirmando serem verídicas todas as informações fornecidas. Fico ciente de que as sessões não desmarcadas serão dadas como realizadas. Além disso, autorizo a utilização de uso de imagem.";
+  const authLines = doc.splitTextToSize(textoAuth, CW - 4) as string[];
+  const authH = authLines.length * 4.2 + 6;
+  guard(authH + 4);
+  fc(GOLD_S); dc(GOLD_S);
+  doc.roundedRect(ML, y - 4.5, CW, authH, 1.5, 1.5, "F");
+  doc.setFontSize(8); doc.setFont("helvetica", "italic"); tc([80, 80, 80]);
+  doc.text(authLines, ML + 2, y);
+  y += authH;
+  doc.setFontSize(8.5); doc.setFont("helvetica", "normal");
+  ([
+    { label: "A paciente confirma e autoriza os procedimentos", key: "autorizado" },
+    { label: "Autoriza uso de imagem",                          key: "autoriza_imagem" },
+  ] as const).forEach(({ label, key }) => {
+    guard(6);
+    const v = bool(key);
+    dc([130, 130, 130]); doc.setLineWidth(0.25);
+    doc.rect(ML, y - CB + 0.4, CB, CB);
+    if (v) {
+      doc.setFontSize(7); doc.setFont("helvetica", "bold"); tc([0, 130, 0]);
+      doc.text("X", ML + 0.55, y - 0.15);
+      doc.setFontSize(8.5); doc.setFont("helvetica", "normal");
+    }
+    tc(TEXT);
+    doc.text(label, ML + CB + 2, y);
+    y += 5;
+  });
+  f("Data da assinatura",
+    str("data_assinatura") ? fmt(str("data_assinatura")) : null);
+  guard(34);
+  y += 10;
+  const SIG_W = 70;
+  const SIG_L = 25;
+  const SIG_R = 115;
+  const GRAY66 = [120, 120, 120] as const;
+  const GRAY44 = [136, 136, 136] as const;
+  dc(GRAY66); doc.setLineWidth(0.4);
+  doc.line(SIG_L, y, SIG_L + SIG_W, y);
+  doc.line(SIG_R, y, SIG_R + SIG_W, y);
+  y += 5;
+  doc.setFontSize(8); doc.setFont("helvetica", "normal"); tc(LABEL);
+  doc.text("Assinatura do Cliente",  SIG_L + SIG_W / 2, y, { align: "center" });
+  doc.text("Dra. Gabriela Oliveira", SIG_R + SIG_W / 2, y, { align: "center" });
+  y += 4;
+  doc.setFontSize(7); doc.setFont("helvetica", "normal"); tc(GRAY44);
+  doc.text("(Assinatura via Gov)", SIG_L + SIG_W / 2, y, { align: "center" });
+  doc.text("(Assinatura via Gov)", SIG_R + SIG_W / 2, y, { align: "center" });
+
+  drawFooters();
+
+  const nomeArq = paciente.nome
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, "_");
+  const dataArq = dataAvStr || format(new Date(), "yyyy-MM-dd");
+  doc.save(`Prontuario_${nomeArq}_${dataArq}.pdf`);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PÁGINA — DETALHE DO PACIENTE
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -179,6 +567,7 @@ function PacienteDetalhe() {
   const [uploading, setUploading] = useState(false);
   const [showAnamnese, setShowAnamnese] = useState(false);
   const [fichaEditId, setFichaEditId] = useState<string | null>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function fetchAll() {
@@ -204,7 +593,7 @@ function PacienteDetalhe() {
     for (const file of files) {
       const path = `${user!.id}/${pacienteId}/${Date.now()}_${file.name}`;
       const { error: upErr } = await supabase.storage.from("arquivos-pacientes").upload(path, file);
-      if (upErr) { toast.error(`Erro ao enviar ${file.name}`); continue; }
+      if (upErr) { toast.error(`Erro ao enviar ${file.name}: ${upErr.message}`); continue; }
       const { data: urlData } = supabase.storage.from("arquivos-pacientes").getPublicUrl(path);
       await db.from("arquivos_paciente").insert({
         paciente_id: pacienteId, user_id: user!.id,
@@ -342,10 +731,10 @@ function PacienteDetalhe() {
           ) : (
             <div className="flex flex-col gap-3">
               {fichas.map((f, i) => (
-                <button
+                <div
                   key={f.id}
                   onClick={() => { setFichaEditId(f.id); setShowAnamnese(true); }}
-                  className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm text-left hover:border-[#C8A56A]/40 hover:shadow-md transition-all"
+                  className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm text-left hover:border-[#C8A56A]/40 hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 font-bold text-lg">
                     {fichas.length - i}
@@ -358,11 +747,28 @@ function PacienteDetalhe() {
                       Preenchida em {fmt(f.created_at)} · Dra. Gabriela Oliveira
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                    <span className="text-xs font-medium text-[#A87C3F]">Ver / Editar →</span>
+                  <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={async () => {
+                        setDownloadingPdf(f.id);
+                        const { data } = await db.from("fichas_anamnese").select("*").eq("id", f.id).single();
+                        if (data) await gerarPDF(data as FichaData, paciente!);
+                        setDownloadingPdf(null);
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg border border-[#C8A56A] px-3 py-1.5 text-xs font-medium text-[#A87C3F] hover:bg-[#C8A56A]/10 transition-colors"
+                      title="Baixar PDF"
+                    >
+                      {downloadingPdf === f.id
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Download className="h-3.5 w-3.5" />}
+                      <span>PDF</span>
+                    </button>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      <span className="text-xs font-medium text-[#A87C3F]">Ver / Editar →</span>
+                    </div>
                   </div>
-                </button>
+                </div>
               ))}
             </div>
           )}
@@ -455,9 +861,23 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
 
   const [form, setForm] = useState<FichaData>({
     data_avaliacao: format(new Date(), "yyyy-MM-dd"),
+    // Dados Pessoais (snapshot editável da ficha)
+    nome_paciente: paciente.nome,
+    endereco_paciente: paciente.endereco ?? "",
+    bairro_paciente: paciente.bairro ?? "",
+    cidade_paciente: paciente.cidade ?? "",
+    estado_paciente: paciente.estado ?? "",
+    cep_paciente: paciente.cep ?? "",
+    celular_paciente: fmtCelular(paciente.telefone ?? ""),
+    email_paciente: paciente.email ?? "",
+    profissao_paciente: paciente.profissao ?? "",
+    estado_civil_paciente: paciente.estado_civil ?? "",
+    data_nasc_paciente: paciente.data_nasc ?? "",
+    cpf_paciente: fmtCPF(paciente.cpf ?? ""),
+    idade_paciente: paciente.data_nasc ? calcIdade(paciente.data_nasc) : "",
     // Queixa Principal
     queixa: "", duracao_queixa: "",
-    // Dados Pessoais adicionais (não presentes no cadastro do paciente)
+    // Telefones adicionais
     telefone_residencial: "", telefone_comercial: "",
     // Hábitos Diários
     trat_estetico_anterior: false, trat_estetico_qual: "",
@@ -525,384 +945,29 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
   const tel = (k: string, cel = false) => (e: React.ChangeEvent<HTMLInputElement>) =>
     set(k, cel ? fmtCelular(e.target.value) : fmtTelFixo(e.target.value));
 
-  function handleDownloadPDF() {
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-
-    // ── Layout constants ──────────────────────────────────────────────────
-    const PW = 210, PH = 297;
-    const ML = 15, MR = 15, MT = 15;
-    const CW = PW - ML - MR; // 180 mm
-    const BODY_MAX = PH - 18; // leave 18 mm for footer
-    const FOOTER_LINE = PH - 12;
-    const FOOTER_TXT  = PH - 8;
-    const CB = 3.2; // checkbox square size (mm)
-
-    // ── Color palette (RGB) ──────────────────────────────────────────────
-    const GOLD   = [168, 124, 63]  as const;
-    const GOLD_S = [249, 243, 232] as const; // section bg #F9F3E8
-    const TEXT   = [51,  51,  51]  as const; // #333333
-    const LABEL  = [102, 102, 102] as const; // #666666
-    const BLACK  = [0,   0,   0]   as const; // values
-    const LGRAY  = [200, 200, 200] as const; // separators
-
-    let y = MT;
-
-    // ── Color shortcuts ───────────────────────────────────────────────────
-    const tc = (c: readonly [number, number, number]) => doc.setTextColor(c[0], c[1], c[2]);
-    const fc = (c: readonly [number, number, number]) => doc.setFillColor(c[0], c[1], c[2]);
-    const dc = (c: readonly [number, number, number]) => doc.setDrawColor(c[0], c[1], c[2]);
-
-    const dataAvStr = str("data_avaliacao");
-    const dataAvFmt = dataAvStr
-      ? format(parseISO(dataAvStr), "dd/MM/yyyy", { locale: ptBR })
-      : "—";
-
-    // ── Guard: add page + mini-header if needed ───────────────────────────
-    function guard(h: number) {
-      if (y + h > BODY_MAX) {
-        doc.addPage();
-        y = MT;
-        miniHeader();
-      }
-    }
-
-    function miniHeader() {
-      doc.setFontSize(10); doc.setFont("helvetica", "bold"); tc(GOLD);
-      doc.text("Ficha de Avaliação Geral — Dra. Gabriela Oliveira", ML, y);
-      doc.setFontSize(8); doc.setFont("helvetica", "normal"); tc(LABEL);
-      doc.text(`Data: ${dataAvFmt}`, PW - MR, y, { align: "right" });
-      y += 3;
-      dc(GOLD); doc.setLineWidth(0.3);
-      doc.line(ML, y, PW - MR, y);
-      y += 6;
-    }
-
-    // ── Rodapé em todas as páginas (chamado ao final) ─────────────────────
-    function drawFooters() {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const total = (doc as any).internal?.getNumberOfPages?.() ?? 1;
-      const gerado = format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR });
-      for (let i = 1; i <= total; i++) {
-        doc.setPage(i);
-        dc(LGRAY); doc.setLineWidth(0.2);
-        doc.line(ML, FOOTER_LINE, PW - MR, FOOTER_LINE);
-        doc.setFontSize(7); doc.setFont("helvetica", "normal"); tc(LABEL);
-        doc.text(`Gerado em: ${gerado}`, ML, FOOTER_TXT);
-        doc.text(`Página ${i} de ${total}`, PW - MR, FOOTER_TXT, { align: "right" });
-      }
-    }
-
-    // ── Título de seção com fundo dourado suave ───────────────────────────
-    function secao(titulo: string) {
-      guard(14);
-      y += 3;
-      fc(GOLD_S); dc(GOLD_S);
-      doc.rect(ML, y - 5.5, CW, 7.5, "F");
-      doc.setFontSize(10); doc.setFont("helvetica", "bold"); tc(GOLD);
-      doc.text(titulo.toUpperCase(), ML + 2, y);
-      y += 6;
-      tc(TEXT);
-    }
-
-    // ── Campo label: valor (largura total) ────────────────────────────────
-    function f(label: string, valor: string | boolean | null | undefined, indent = 0) {
-      let v: string;
-      if (typeof valor === "boolean") v = valor ? "Sim" : "Não";
-      else v = (valor as string | null | undefined) || "—";
-      const x = ML + indent;
-      const w = CW - indent;
-      doc.setFontSize(8.5); doc.setFont("helvetica", "bold"); tc(LABEL);
-      const lbl = `${label}: `;
-      const lw = doc.getTextWidth(lbl);
-      const lines = doc.splitTextToSize(v, w - lw) as string[];
-      guard(lines.length * 4.5 + 1.5);
-      doc.text(lbl, x, y);
-      doc.setFont("helvetica", "normal"); tc(BLACK);
-      for (let i = 0; i < lines.length; i++) {
-        if (i > 0) { y += 4.5; guard(5); }
-        doc.text(lines[i], x + lw, y);
-      }
-      y += 5;
-    }
-
-    // ── Duas colunas ─────────────────────────────────────────────────────
-    function f2(
-      l1: string, v1: string | null | undefined,
-      l2: string, v2: string | null | undefined,
-    ) {
-      guard(6);
-      const col = CW / 2 - 2;
-      doc.setFontSize(8.5);
-      ([{ l: l1, v: v1, x: ML }, { l: l2, v: v2, x: ML + CW / 2 }] as const).forEach(({ l, v, x }) => {
-        const lbl = `${l}: `;
-        doc.setFont("helvetica", "bold"); tc(LABEL);
-        const lw = doc.getTextWidth(lbl);
-        doc.text(lbl, x, y);
-        doc.setFont("helvetica", "normal"); tc(BLACK);
-        doc.text((doc.splitTextToSize(v || "—", col - lw) as string[])[0], x + lw, y);
-      });
-      y += 5;
-    }
-
-    // ── Três colunas ─────────────────────────────────────────────────────
-    function f3(
-      l1: string, v1: string | null | undefined,
-      l2: string, v2: string | null | undefined,
-      l3: string, v3: string | null | undefined,
-    ) {
-      guard(6);
-      const col = CW / 3 - 2;
-      doc.setFontSize(8.5);
-      ([
-        { l: l1, v: v1, x: ML },
-        { l: l2, v: v2, x: ML + CW / 3 },
-        { l: l3, v: v3, x: ML + (CW * 2) / 3 },
-      ] as const).forEach(({ l, v, x }) => {
-        const lbl = `${l}: `;
-        doc.setFont("helvetica", "bold"); tc(LABEL);
-        const lw = doc.getTextWidth(lbl);
-        doc.text(lbl, x, y);
-        doc.setFont("helvetica", "normal"); tc(BLACK);
-        doc.text((doc.splitTextToSize(v || "—", col - lw) as string[])[0], x + lw, y);
-      });
-      y += 5;
-    }
-
-    // ── Campo Sim / Não com checkboxes desenhados ─────────────────────────
-    function yn(label: string, key: string, subKey?: string, subLabel = "Qual") {
-      const v = bool(key);
-      const CBX = PW - MR - 26; // posição X dos checkboxes
-      doc.setFontSize(8.5);
-      const lblLines = doc.splitTextToSize(label, CBX - ML - 2) as string[];
-      guard(lblLines.length * 4.5 + (v && subKey ? 5.5 : 1));
-
-      // Texto do label
-      doc.setFont("helvetica", "normal"); tc(TEXT);
-      doc.text(lblLines[0], ML, y);
-
-      // Checkbox [ ] Sim
-      dc([130, 130, 130]); doc.setLineWidth(0.25);
-      doc.rect(CBX, y - CB + 0.4, CB, CB);
-      if (v) {
-        doc.setFontSize(7); doc.setFont("helvetica", "bold"); tc([0, 130, 0]);
-        doc.text("X", CBX + 0.55, y - 0.15);
-      }
-      doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); tc(TEXT);
-      doc.text("Sim", CBX + CB + 1, y);
-
-      // Checkbox [ ] Não
-      const CBX2 = CBX + 13;
-      dc([130, 130, 130]);
-      doc.rect(CBX2, y - CB + 0.4, CB, CB);
-      if (!v) {
-        doc.setFontSize(7); doc.setFont("helvetica", "bold"); tc([190, 0, 0]);
-        doc.text("X", CBX2 + 0.55, y - 0.15);
-      }
-      doc.setFontSize(8.5); doc.setFont("helvetica", "normal"); tc(TEXT);
-      doc.text("Não", CBX2 + CB + 1, y);
-
-      // Linhas extras do label
-      for (let i = 1; i < lblLines.length; i++) {
-        y += 4.5; guard(5);
-        doc.text(lblLines[i], ML, y);
-      }
-      y += 5;
-
-      // Subcampo quando Sim
-      if (v && subKey) {
-        const sv = str(subKey) || "—";
-        guard(5);
-        doc.setFontSize(8);
-        const sublbl = `${subLabel}: `;
-        doc.setFont("helvetica", "bold"); tc(LABEL);
-        const slw = doc.getTextWidth(sublbl);
-        doc.text(sublbl, ML + 6, y);
-        doc.setFont("helvetica", "normal"); tc(BLACK);
-        doc.text((doc.splitTextToSize(sv, CW - 6 - slw) as string[])[0], ML + 6 + slw, y);
-        y += 5;
-        doc.setFontSize(8.5);
-      }
-    }
-
-    // ════════════════════════════════════════════════════════════════════════
-    // CABEÇALHO — PÁGINA 1
-    // ════════════════════════════════════════════════════════════════════════
-
-    doc.setFontSize(16); doc.setFont("helvetica", "bold"); tc(GOLD);
-    doc.text("Ficha de Avaliação Geral", PW / 2, y, { align: "center" });
-    y += 7;
-
-    doc.setFontSize(11); doc.setFont("helvetica", "normal"); tc(LABEL);
-    doc.text("Dra. Gabriela Oliveira", PW / 2, y, { align: "center" });
-    y += 5;
-
-    doc.setFontSize(9); tc(TEXT);
-    doc.text(`Data: ${dataAvFmt}`, PW - MR, y, { align: "right" });
-    y += 4;
-
-    dc(GOLD); doc.setLineWidth(0.6);
-    doc.line(ML, y, PW - MR, y);
-    y += 8;
-
-    // ════════════════════════════════════════════════════════════════════════
-    // DADOS PESSOAIS
-    // ════════════════════════════════════════════════════════════════════════
-    secao("Dados Pessoais");
-    f2("Nome", paciente.nome, "Idade", calcIdade(paciente.data_nasc));
-    f("Endereço", paciente.endereco);
-    f3("CEP", paciente.cep, "Bairro", paciente.bairro,
-      "Cidade / Estado", [paciente.cidade, paciente.estado].filter(Boolean).join(" / ") || null);
-    f3("Tel. Residencial", str("telefone_residencial") || null,
-      "Tel. Comercial",  str("telefone_comercial")    || null,
-      "Celular",         fmtCelular(paciente.telefone ?? "") || null);
-    f3("Data de Nasc.", paciente.data_nasc ? fmt(paciente.data_nasc) : null,
-      "CPF",       fmtCPF(paciente.cpf ?? "") || null,
-      "Profissão", paciente.profissao);
-    f2("Estado Civil", paciente.estado_civil, "E-mail", paciente.email);
-    y += 2;
-
-    // ════════════════════════════════════════════════════════════════════════
-    // QUEIXA PRINCIPAL
-    // ════════════════════════════════════════════════════════════════════════
-    secao("Queixa Principal");
-    f2("Queixa", str("queixa") || null, "Duração", str("duracao_queixa") || null);
-    y += 2;
-
-    // ════════════════════════════════════════════════════════════════════════
-    // HÁBITOS DIÁRIOS
-    // ════════════════════════════════════════════════════════════════════════
-    secao("Hábitos Diários");
-    yn("Tratamento estético anterior?",  "trat_estetico_anterior", "trat_estetico_qual");
-    yn("Usa lentes de contato?",          "usa_lente_contato");
-    yn("Utilização de cosméticos?",       "usa_cosmeticos",   "cosmeticos_qual");
-    yn("Exposição ao sol?",               "exposicao_sol");
-    yn("Filtro solar?",                   "filtro_solar",     "filtro_solar_frequencia", "Frequência");
-    yn("Tabagismo?",                      "tabagismo",        "tabagismo_quantidade",    "Cigarros/dia");
-    yn("Ingere bebida alcoólica?",        "alcool",           "alcool_frequencia",       "Frequência");
-    f("Funcionamento intestinal",          str("funcionamento_intestinal"));
-    f2("Qualidade do sono",               str("qualidade_sono")  || null,
-       "Horas de sono/noite",             str("horas_sono")      || null);
-    yn("Passa muito tempo em pé e/ou sentada?", "muito_tempo_pe_sentada", "quanto_tempo_pe_sentada", "Quanto tempo");
-    f("Ingestão de água (copos/dia)",      str("ingestao_agua_copos"));
-    f2("Tipo de alimentação",             str("tipo_alimentacao")      || null,
-       "Alimentos de preferência",        str("alimentos_preferencia") || null);
-    yn("Pratica atividade física?",        "atividade_fisica");
-    if (bool("atividade_fisica")) {
-      f2("Tipo de atividade", str("atividade_fisica_tipo") || null,
-         "Frequência",        str("atividade_fisica_frequencia") || null);
-    }
-    yn("Uso de anticoncepcional?",         "anticoncepcional", "anticoncepcional_qual");
-    f("Data do 1º dia da última menstruação",
-      str("dt_ultima_menstruacao") ? fmt(str("dt_ultima_menstruacao")) : null);
-    yn("Gestante?",                        "gestante");
-    yn("Gestações anteriores?",            "gestacoes");
-    if (bool("gestacoes")) {
-      f2("Quantas",         str("gestacoes_quantas") || null,
-         "Há quanto tempo", str("gestacoes_tempo")   || null);
-    }
-    y += 2;
-
-    // ════════════════════════════════════════════════════════════════════════
-    // HISTÓRICO CLÍNICO
-    // ════════════════════════════════════════════════════════════════════════
-    secao("Histórico Clínico");
-    yn("Tratamento médico atual?",                      "tratamento_medico_atual",    "medicamentos_uso",               "Medicamentos em uso");
-    yn("Uso de anticoagulantes?",                       "uso_anticoagulantes",        "anticoagulantes_quais",          "Quais");
-    yn("Antecedentes alérgicos?",                       "antecedentes_alergicos",     "alergias_quais",                 "Quais");
-    yn("Reação alérgica a anestésicos? (ex.: lidocaína)","alergia_anestesico");
-    yn("Portador de marcapasso?",                       "marcapasso");
-    yn("Alterações cardíacas?",                         "alteracoes_cardiacas",       "alteracoes_cardiacas_quais",     "Quais");
-    yn("Hipo/hipertensão arterial?",                    "hipo_hipertensao");
-    yn("Distúrbio circulatório?",                       "disturbio_circulatorio",     "disturbio_circulatorio_qual",   "Qual");
-    yn("Distúrbio renal?",                              "disturbio_renal",            "disturbio_renal_qual",          "Qual");
-    yn("Distúrbio hormonal?",                           "disturbio_hormonal",         "disturbio_hormonal_qual",       "Qual");
-    yn("Distúrbio gastro-intestinal?",                  "disturbio_gastro",           "disturbio_gastro_qual",         "Qual");
-    yn("Epilepsia / convulsões?",                       "epilepsia",                  "epilepsia_frequencia",          "Frequência");
-    yn("Alterações psicológicas / psiquiátricas?",      "alteracoes_psicologicas",    "alteracoes_psicologicas_quais", "Quais");
-    yn("Estresse?",                                     "estresse",                   "estresse_obs",                  "Observações");
-    yn("Antecedentes oncológicos?",                     "antecedentes_oncologicos",   "antecedentes_oncologicos_qual", "Qual");
-    yn("Diabetes?",                                     "diabetes",                   "diabetes_tipo",                 "Tipo");
-    yn("Doença autoimune?",                             "doenca_autoimune",           "doenca_autoimune_qual",         "Qual");
-    yn("Soropositivo?",                                 "soropositivo");
-    f("Outra condição / doença pré-existente",           str("outra_condicao"));
-    f("Data do último Check-Up",
-      str("dt_ultimo_checkup") ? fmt(str("dt_ultimo_checkup")) : null);
-    y += 2;
-
-    // ════════════════════════════════════════════════════════════════════════
-    // TRATAMENTO ESTÉTICO / CIRÚRGICO
-    // ════════════════════════════════════════════════════════════════════════
-    secao("Tratamento da Medicina Estética e Cirúrgica");
-    yn("Próteses metálicas?",               "proteses_metalicas",   "proteses_metalicas_qual",  "Qual");
-    yn("Implante dentário?",                "implante_dentario");
-    yn("Tratamento dermatológico / estético?","trat_dermatologico",  "trat_dermatologico_qual",  "Qual");
-    yn("Cirurgia plástica estética?",        "cirurgia_plastica",    "cirurgia_plastica_qual",   "Qual");
-    yn("Cirurgia reparadora?",               "cirurgia_reparadora",  "cirurgia_reparadora_qual", "Qual");
-    y += 2;
-
-    // ════════════════════════════════════════════════════════════════════════
-    // AUTORIZAÇÃO
-    // ════════════════════════════════════════════════════════════════════════
-    secao("Autorização");
-
-    const textoAuth = "Me responsabilizo pelo questionário e autorizo a realização dos procedimentos descritos anteriormente, afirmando serem verídicas todas as informações fornecidas. Fico ciente de que as sessões não desmarcadas serão dadas como realizadas. Além disso, autorizo a utilização de uso de imagem.";
-    const authLines = doc.splitTextToSize(textoAuth, CW - 4) as string[];
-    const authH = authLines.length * 4.2 + 6;
-    guard(authH + 4);
-    fc(GOLD_S); dc(GOLD_S);
-    doc.roundedRect(ML, y - 4.5, CW, authH, 1.5, 1.5, "F");
-    doc.setFontSize(8); doc.setFont("helvetica", "italic"); tc([80, 80, 80]);
-    doc.text(authLines, ML + 2, y);
-    y += authH;
-
-    // Checkboxes de autorização
-    doc.setFontSize(8.5); doc.setFont("helvetica", "normal");
-    ([
-      { label: "A paciente confirma e autoriza os procedimentos", key: "autorizado" },
-      { label: "Autoriza uso de imagem",                          key: "autoriza_imagem" },
-    ] as const).forEach(({ label, key }) => {
-      guard(6);
-      const v = bool(key);
-      dc([130, 130, 130]); doc.setLineWidth(0.25);
-      doc.rect(ML, y - CB + 0.4, CB, CB);
-      if (v) {
-        doc.setFontSize(7); doc.setFont("helvetica", "bold"); tc([0, 130, 0]);
-        doc.text("X", ML + 0.55, y - 0.15);
-        doc.setFontSize(8.5); doc.setFont("helvetica", "normal");
-      }
-      tc(TEXT);
-      doc.text(label, ML + CB + 2, y);
-      y += 5;
-    });
-
-    f("Data da assinatura",
-      str("data_assinatura") ? fmt(str("data_assinatura")) : null);
-
-    // Linha de assinatura
-    guard(28);
-    y += 10;
-    dc([120, 120, 120]); doc.setLineWidth(0.4);
-    doc.line(ML, y, ML + 88, y);
-    y += 5;
-    doc.setFontSize(8); doc.setFont("helvetica", "normal"); tc(LABEL);
-    doc.text("Assinatura do Cliente", ML, y);
-    y += 5;
-    doc.setFont("helvetica", "italic"); tc(GOLD);
-    doc.text("Dra. Gabriela Oliveira", ML + 44, y, { align: "center" });
-
-    // ── Rodapé e salvar ──────────────────────────────────────────────────
-    drawFooters();
-
-    const nomeArq = paciente.nome
-      .normalize("NFD")
-      .replace(/[̀-ͯ]/g, "")
-      .replace(/\s+/g, "_");
-    const dataArq = dataAvStr || format(new Date(), "yyyy-MM-dd");
-    doc.save(`Prontuario_${nomeArq}_${dataArq}.pdf`);
+  async function handleDownloadPDF() {
+    await gerarPDF(form, paciente);
   }
 
   async function handleSave() {
     setSaving(true);
+    const obrigatorios: [string, string][] = [
+      ["nome_paciente",         "Nome"],
+      ["data_nasc_paciente",    "Data de Nascimento"],
+      ["cpf_paciente",          "CPF"],
+      ["celular_paciente",      "Celular"],
+      ["endereco_paciente",     "Endereço"],
+      ["cep_paciente",          "CEP"],
+      ["bairro_paciente",       "Bairro"],
+      ["cidade_paciente",       "Cidade"],
+      ["estado_paciente",       "Estado"],
+      ["profissao_paciente",    "Profissão"],
+      ["estado_civil_paciente", "Estado Civil"],
+      ["email_paciente",        "E-mail"],
+    ];
+    for (const [key, label] of obrigatorios) {
+      if (!str(key)) { toast.error(`${label} é obrigatório`); setSaving(false); return; }
+    }
     const payload = { ...form, paciente_id: paciente.id, user_id: userId };
     const sanitized = Object.fromEntries(
       Object.entries(payload).map(([k, v]) => [
@@ -962,27 +1027,27 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
           {/* Nome + Idade */}
           <Row3>
             <div className="sm:col-span-2">
-              <FL>Nome</FL>
-              <FInput value="" placeholder={paciente.nome} disabled />
+              <FL>Nome *</FL>
+              <FInput value={str("nome_paciente")} onChange={txt("nome_paciente")} />
             </div>
             <div>
               <FL>Idade</FL>
-              <FInput value="" placeholder={calcIdade(paciente.data_nasc)} disabled />
+              <FInput value={str("idade_paciente")} onChange={txt("idade_paciente")} placeholder="Ex: 30 anos" />
             </div>
           </Row3>
 
           {/* Endereço */}
           <div className="mt-3">
-            <FL>Endereço</FL>
-            <FInput value="" placeholder={paciente.endereco ?? ""} disabled />
+            <FL>Endereço *</FL>
+            <FInput value={str("endereco_paciente")} onChange={txt("endereco_paciente")} />
           </div>
 
           {/* CEP + Bairro + Cidade + Estado */}
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div><FL>CEP</FL><FInput value="" placeholder={paciente.cep ?? ""} disabled /></div>
-            <div><FL>Bairro</FL><FInput value="" placeholder={paciente.bairro ?? ""} disabled /></div>
-            <div><FL>Cidade</FL><FInput value="" placeholder={paciente.cidade ?? ""} disabled /></div>
-            <div><FL>Estado</FL><FInput value="" placeholder={paciente.estado ?? ""} disabled /></div>
+            <div><FL>CEP *</FL><FInput value={str("cep_paciente")} onChange={txt("cep_paciente")} /></div>
+            <div><FL>Bairro *</FL><FInput value={str("bairro_paciente")} onChange={txt("bairro_paciente")} /></div>
+            <div><FL>Cidade *</FL><FInput value={str("cidade_paciente")} onChange={txt("cidade_paciente")} /></div>
+            <div><FL>Estado *</FL><FInput value={str("estado_paciente")} onChange={txt("estado_paciente")} /></div>
           </div>
 
           {/* Telefones */}
@@ -1004,31 +1069,37 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
               />
             </div>
             <div className="mt-3">
-              <FL>Celular</FL>
-              <FInput value="" placeholder={fmtCelular(paciente.telefone ?? "")} disabled />
+              <FL>Celular *</FL>
+              <FInput
+                value={str("celular_paciente")}
+                onChange={tel("celular_paciente", true)}
+                placeholder="(00) 00000-0000"
+              />
             </div>
           </Row3>
 
           {/* Data de nasc. + CPF + Profissão + Estado Civil */}
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div>
-              <FL>Data de Nasc.</FL>
-              <FInput value="" placeholder={paciente.data_nasc ? fmt(paciente.data_nasc) : ""} disabled />
+              <FL>Data de Nasc. *</FL>
+              <FInput value={str("data_nasc_paciente")} onChange={txt("data_nasc_paciente")} type="date" />
             </div>
             <div>
-              <FL>CPF</FL>
-              <FInput value="" placeholder={fmtCPF(paciente.cpf ?? "")} disabled />
+              <FL>CPF *</FL>
+              <FInput
+                value={str("cpf_paciente")}
+                onChange={(e) => set("cpf_paciente", fmtCPF(e.target.value))}
+              />
             </div>
-            <div><FL>Profissão</FL><FInput value="" placeholder={paciente.profissao ?? ""} disabled /></div>
-            <div><FL>Estado Civil</FL><FInput value="" placeholder={paciente.estado_civil ?? ""} disabled /></div>
+            <div><FL>Profissão *</FL><FInput value={str("profissao_paciente")} onChange={txt("profissao_paciente")} /></div>
+            <div><FL>Estado Civil *</FL><FInput value={str("estado_civil_paciente")} onChange={txt("estado_civil_paciente")} /></div>
           </div>
 
           {/* E-mail */}
           <div className="mt-3">
-            <FL>E-mail</FL>
-            <FInput value="" placeholder={paciente.email ?? ""} disabled />
+            <FL>E-mail *</FL>
+            <FInput value={str("email_paciente")} onChange={txt("email_paciente")} type="email" />
           </div>
-          <p className="mt-2 text-xs text-gray-400 italic">* Campos em cinza gerenciados no cadastro do paciente</p>
 
           {/* ── QUEIXA PRINCIPAL ── */}
           <Secao>Queixa Principal</Secao>
