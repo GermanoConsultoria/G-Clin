@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import jsPDF from "jspdf";
-import logoGabriela from "@/assets/logo_gabriela.jpeg";
+import logoGabriela from "@/assets/logo.png";
 import {
   ArrowLeft, FileText, Upload, Trash2, Download, Eye,
   Loader2, FilePlus, ClipboardList, FolderOpen, X,
@@ -221,7 +221,7 @@ async function gerarPDF(formData: FichaData, paciente: Paciente): Promise<void> 
 
   function miniHeader() {
     doc.setFontSize(10); doc.setFont("helvetica", "bold"); tc(GOLD);
-    doc.text("Ficha de Avaliação Geral — Dra. Gabriela Oliveira", ML, y);
+    doc.text("Ficha de Avaliação Geral — Dra. Tharine Souza", ML, y);
     doc.setFontSize(8); doc.setFont("helvetica", "normal"); tc(LABEL);
     doc.text(`Data: ${dataAvFmt}`, PW - MR, y, { align: "right" });
     y += 3;
@@ -384,7 +384,7 @@ async function gerarPDF(formData: FichaData, paciente: Paciente): Promise<void> 
   doc.setFontSize(16); doc.setFont("helvetica", "bold"); tc(GOLD);
   doc.text("Ficha de Avaliação Geral", TITLE_CX, 20, { align: "center" });
   doc.setFontSize(11); doc.setFont("helvetica", "normal"); tc(LABEL);
-  doc.text("Dra. Gabriela Oliveira", TITLE_CX, 28, { align: "center" });
+  doc.text("Dra. Tharine Souza", TITLE_CX, 28, { align: "center" });
   doc.setFontSize(9); tc(TEXT);
   doc.text(`Data: ${dataAvFmt}`, PW - MR, 34, { align: "right" });
   y = 36;
@@ -534,7 +534,7 @@ async function gerarPDF(formData: FichaData, paciente: Paciente): Promise<void> 
   y += 5;
   doc.setFontSize(8); doc.setFont("helvetica", "normal"); tc(LABEL);
   doc.text("Assinatura do Cliente",  SIG_L + SIG_W / 2, y, { align: "center" });
-  doc.text("Dra. Gabriela Oliveira", SIG_R + SIG_W / 2, y, { align: "center" });
+  doc.text("Dra. Tharine Souza", SIG_R + SIG_W / 2, y, { align: "center" });
   y += 4;
   doc.setFontSize(7); doc.setFont("helvetica", "normal"); tc(GRAY44);
   doc.text("(Assinatura via Gov)", SIG_L + SIG_W / 2, y, { align: "center" });
@@ -753,7 +753,7 @@ function PacienteDetalhe() {
                       Ficha de Avaliação Geral — {fmt(f.data_avaliacao)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Preenchida em {fmt(f.created_at)} · Dra. Gabriela Oliveira
+                      Preenchida em {fmt(f.created_at)} · Dra. Tharine Souza
                     </p>
                   </div>
                   <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
@@ -862,7 +862,7 @@ function PacienteDetalhe() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// MODAL — FICHA DE AVALIAÇÃO GERAL (Dra. Gabriela Oliveira)
+// MODAL — FICHA DE AVALIAÇÃO GERAL (Dra. Tharine Souza)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
@@ -1019,7 +1019,7 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display text-lg font-bold text-[#A87C3F]">Ficha de Avaliação Geral</h2>
-              <p className="text-xs text-muted-foreground">Dra. Gabriela Oliveira · {paciente.nome}</p>
+              <p className="text-xs text-muted-foreground">Dra. Tharine Souza · {paciente.nome}</p>
             </div>
             <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100">
               <X className="h-5 w-5" />
@@ -1356,7 +1356,7 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
             <div className="mt-3">
               <FL>Assinatura do cliente</FL>
               <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-3 py-4 text-center text-xs text-gray-400">
-                Dra. Gabriela Oliveira
+                Dra. Tharine Souza
               </div>
             </div>
           </Row2>

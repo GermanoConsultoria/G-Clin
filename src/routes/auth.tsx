@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import gtechLogo from "@/assets/g-tech-logo.png";
-import logoGabriela from "@/assets/logo_gabriela.jpeg";
+import logoGabriela from "@/assets/logo.png";
 
 export const Route = createFileRoute("/auth")({ component: AuthPage });
 
@@ -64,7 +64,7 @@ function AuthPage() {
         <Link to="/" className="flex flex-col items-center gap-3">
           <img
             src={logoGabriela}
-            alt="Gabriela Clínica de Estética"
+            alt="THARINE SOUZA BEAUTY ARTIST"
             className="h-24 w-24 rounded-full border-4 border-[#C8A56A] object-cover shadow-lg"
             style={{ boxShadow: "0 4px 24px rgba(200,165,106,0.25)" }}
           />
@@ -81,7 +81,7 @@ function AuthPage() {
             </div>
             <span className="font-display text-xl font-bold text-[#4B3A2A]">G-Clin</span>
           </div>
-          <p className="text-sm text-[#6E5A45]">Gabriela Clínica de Estética</p>
+          <p className="text-sm text-[#6E5A45]">THARINE SOUZA BEAUTY ARTIST</p>
         </Link>
 
         {/* Card de login */}

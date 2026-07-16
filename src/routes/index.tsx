@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Calendar, MessageCircle, Stethoscope, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import logoGabriela from "@/assets/logo_gabriela.jpeg";
+import logoGabriela from "@/assets/logo.png";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {

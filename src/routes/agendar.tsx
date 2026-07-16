@@ -5,7 +5,7 @@ import { ptBR } from "date-fns/locale";
 import { CheckCircle2, ChevronDown, Clock, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateSlotsForDay, type BusinessHoursRow } from "@/lib/business-hours";
-import logoGabriela from "@/assets/logo_gabriela.jpeg";
+import logoGabriela from "@/assets/logo.png";
 
 export const Route = createFileRoute("/agendar")({ component: AgendarPage });
 
@@ -271,7 +271,7 @@ function AgendarPage() {
       <header className="flex flex-col items-center gap-4 px-6 pt-10 pb-8">
         <img
           src={logoGabriela}
-          alt="Dra. Gabriela"
+          alt="Dra. Tharine Souza"
           className="h-20 w-20 rounded-full object-cover"
           style={{ border: "4px solid #C8A56A", boxShadow: "0 4px 20px rgba(200,165,106,0.3)" }}
         />
@@ -478,7 +478,7 @@ function AgendarPage() {
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
-                placeholder="Alguma informação adicional para a Dra. Gabriela?"
+                placeholder="Alguma informação adicional para a Dra. Tharine Souza?"
                 className="fi resize-none"
               />
             </Field>

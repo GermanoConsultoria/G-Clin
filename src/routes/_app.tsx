@@ -9,7 +9,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import gtechLogo from "@/assets/g-tech-logo.png";
-import logoGabriela from "@/assets/logo_gabriela.jpeg";
+import logoGabriela from "@/assets/logo.png";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
@@ -100,11 +100,11 @@ function AppLayout() {
           <div className={`flex items-center gap-3 overflow-hidden transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 hidden lg:flex" : "opacity-100 w-auto"}`}>
             <img
               src={logoGabriela}
-              alt="Dra. Gabriela"
+              alt="Dra. Tharine Souza"
               className="h-10 w-10 shrink-0 rounded-full border border-[#C8A56A] object-cover"
             />
             <div className="flex flex-col">
-              <span className="font-display text-sm font-bold text-[#A87C3F] whitespace-nowrap">Dra. Gabriela</span>
+              <span className="font-display text-sm font-bold text-[#A87C3F] whitespace-nowrap">Dra. Tharine Souza</span>
             </div>
           </div>
           
@@ -190,8 +190,8 @@ function AppLayout() {
         {/* Header Mobile */}
         <header className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden shadow-sm">
           <div className="flex items-center gap-3 font-display font-bold text-[#A87C3F]">
-            <img src={logoGabriela} alt="Dra. Gabriela" className="h-9 w-9 rounded-full border border-[#C8A56A] object-cover" />
-            Dra. Gabriela
+            <img src={logoGabriela} alt="Dra. Tharine Souza" className="h-9 w-9 rounded-full border border-[#C8A56A] object-cover" />
+            Dra. Tharine Souza
           </div>
           <button
             onClick={() => setMobileOpen(true)}
