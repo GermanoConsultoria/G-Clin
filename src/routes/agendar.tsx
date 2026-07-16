@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CheckCircle2, ChevronDown, Clock, Zap } from "lucide-react";
+import { CheckCircle2, ChevronDown, Clock, Plus, X, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { generateSlotsForDay, type BusinessHoursRow } from "@/lib/business-hours";
 import logoGabriela from "@/assets/logo.png";
@@ -72,6 +72,98 @@ function isSlotPast(slot: string, date: string, now: Date): boolean {
   return new Date(`${date}T${slot}`).getTime() <= now.getTime();
 }
 
+// ── ServicePicker ─────────────────────────────────────────────────────────────
+// Self-contained dropdown for picking a single service; manages its own open state.
+function ServicePicker({
+  services,
+  grupos,
+  value,
+  onChange,
+  placeholder = "Selecione um serviço...",
+}: {
+  services: Service[];
+  grupos: { value: string; label: string; items: Service[] }[];
+  value: string;
+  onChange: (id: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function close(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, []);
+
+  const selected = value !== "none" ? services.find((s) => s.id === value) : null;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between rounded-md border border-[#D0C7B6] bg-white px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-[#B5936E] focus:ring-offset-2 transition"
+      >
+        <span className={selected ? "text-[#83715D]" : "text-[#AC9D8A]"}>
+          {selected ? selected.name : placeholder}
+        </span>
+        <ChevronDown
+          size={15}
+          className={`text-[#AC9D8A] transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-[200] mt-1 max-h-72 overflow-y-auto rounded-xl border border-[#D0C7B6] bg-white shadow-2xl">
+          {grupos.length === 0 ? (
+            <div className="px-4 py-6 text-center text-sm text-[#AC9D8A]">
+              Nenhum serviço disponível
+            </div>
+          ) : (
+            grupos.map((grupo) => (
+              <div key={grupo.value}>
+                <button
+                  type="button"
+                  className="flex w-full cursor-default items-center px-3 py-2"
+                >
+                  <span className="text-sm font-semibold" style={{ color: "#83715D" }}>
+                    {grupo.label}
+                  </span>
+                </button>
+                {grupo.items.map((svc) => (
+                  <button
+                    key={svc.id}
+                    type="button"
+                    onClick={() => { onChange(svc.id); setOpen(false); }}
+                    className={`flex w-full items-center justify-between px-5 py-2.5 text-left text-sm transition-colors hover:bg-[#F8F0ED] ${
+                      value === svc.id ? "bg-[#F8F0ED] text-[#83715D]" : "text-[#83715D]"
+                    }`}
+                  >
+                    <span>{svc.name}</span>
+                    <div className="ml-2 flex shrink-0 items-center gap-2 text-xs text-[#AC9D8A]">
+                      <span className="flex items-center gap-0.5">
+                        <Clock size={11} />{svc.duration_minutes}min
+                      </span>
+                      <span>
+                        {svc.is_hof && Number(svc.price) === 0
+                          ? "Sob avaliação"
+                          : `R$ ${Number(svc.price).toFixed(2)}`}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AgendarPage() {
   const clinicUserId = import.meta.env.VITE_CLINIC_USER_ID ?? 'b3acc6c6-1ecd-4a20-889b-66b806408f58';
 
@@ -82,6 +174,7 @@ function AgendarPage() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [serviceId, setServiceId] = useState<string>("none");
+  const [extraServices, setExtraServices] = useState<string[]>([]);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [anticipate, setAnticipate] = useState(false);
@@ -91,12 +184,10 @@ function AgendarPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [dropOpen, setDropOpen] = useState(false);
-  const dropRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => new Date());
 
   const [confirmed, setConfirmed] = useState<{
-    name: string; service: string; date: string; time: string;
+    name: string; services: string[]; date: string; time: string; totalPrice: number;
   } | null>(null);
 
   useEffect(() => {
@@ -124,15 +215,6 @@ function AgendarPage() {
     return () => clearInterval(id);
   }, []);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function close(e: MouseEvent) {
-      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setDropOpen(false);
-    }
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, []);
-
   // Fetch existing appointments for the selected day (to check slot availability)
   useEffect(() => {
     if (!date) { setDayAppts([]); setTime(""); return; }
@@ -151,7 +233,28 @@ function AgendarPage() {
       });
   }, [date]);
 
-  const selectedService = serviceId !== "none" ? services.find((s) => s.id === serviceId) : null;
+  // ── Multi-service helpers ──────────────────────────────────────────────────
+  const addExtraService = () => setExtraServices((prev) => [...prev, "none"]);
+  const removeExtraService = (idx: number) =>
+    setExtraServices((prev) => prev.filter((_, i) => i !== idx));
+  const updateExtraService = (idx: number, id: string) =>
+    setExtraServices((prev) => prev.map((s, i) => (i === idx ? id : s)));
+
+  // All selected service objects (only resolved ones — "none" is ignored)
+  const allSelectedServices = useMemo(() => {
+    const ids = [serviceId, ...extraServices].filter((id) => id !== "none");
+    return ids.map((id) => services.find((s) => s.id === id)).filter(Boolean) as Service[];
+  }, [serviceId, extraServices, services]);
+
+  const totalDuration = useMemo(
+    () => allSelectedServices.reduce((sum, s) => sum + s.duration_minutes, 0) || 30,
+    [allSelectedServices],
+  );
+
+  const totalPrice = useMemo(
+    () => allSelectedServices.reduce((sum, s) => sum + Number(s.price), 0),
+    [allSelectedServices],
+  );
 
   const bhForDay = useMemo(() => {
     if (!date) return null;
@@ -161,14 +264,13 @@ function AgendarPage() {
 
   const slots = useMemo(() => {
     if (!date) return [];
-    const duration = selectedService?.duration_minutes ?? 30;
-    return getSlotsForDisplay(date, duration, dayAppts, services, bhForDay);
-  }, [date, bhForDay, selectedService, dayAppts, services]);
+    return getSlotsForDisplay(date, totalDuration, dayAppts, services, bhForDay);
+  }, [date, bhForDay, totalDuration, dayAppts, services]);
 
-  // When service changes and the previously selected slot is now past, clear it
+  // Clear selected slot when duration changes and the slot is no longer valid
   useEffect(() => {
     if (time && isSlotPast(time, date, now)) setTime("");
-  }, [serviceId]);
+  }, [serviceId, extraServices]);
 
   const today = format(new Date(), "yyyy-MM-dd");
 
@@ -182,46 +284,74 @@ function AgendarPage() {
     setFormError(null);
     if (!name.trim())                           return setFormError("Preencha seu nome completo.");
     if (phone.replace(/\D/g, "").length < 10)  return setFormError("Preencha um telefone válido.");
-    if (serviceId === "none")                   return setFormError("Selecione um serviço.");
+    if (serviceId === "none")                   return setFormError("Selecione ao menos um serviço.");
     if (!date)                                  return setFormError("Selecione uma data.");
     if (!time)                                  return setFormError("Selecione um horário.");
     if (isSlotPast(time, date, now))            return setFormError("Este horário já passou. Escolha outro.");
     if (!clinicUserId)                          return setFormError("Configuração da clínica não encontrada.");
 
     setSaving(true);
-    const svc = services.find((s) => s.id === serviceId);
-    const { error } = await supabase.from("appointments").insert({
-      user_id: clinicUserId,
-      client_name: name.trim(),
-      phone: phone.replace(/\D/g, ""),
-      service_id: serviceId,
-      service_name: svc?.name ?? null,
-      scheduled_at: new Date(`${date}T${time}`).toISOString(),
-      status: "agendado",
-      type: "procedimento",
-      wants_to_anticipate: anticipate,
-      extra_charge: false,
-      notes: notes.trim() || null,
-    });
+
+    const serviceName = allSelectedServices.map((s) => s.name).join(" + ") || null;
+
+    const { data: inserted, error } = await supabase
+      .from("appointments")
+      .insert({
+        user_id: clinicUserId,
+        client_name: name.trim(),
+        phone: phone.replace(/\D/g, ""),
+        service_id: serviceId,
+        service_name: serviceName,
+        scheduled_at: new Date(`${date}T${time}`).toISOString(),
+        status: "agendado",
+        type: "procedimento",
+        wants_to_anticipate: anticipate,
+        extra_charge: false,
+        notes: notes.trim() || null,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      setSaving(false);
+      return setFormError("Erro ao confirmar agendamento: " + error.message);
+    }
+
+    // Insert one row per service in appointment_services
+    if (allSelectedServices.length > 0) {
+      const { error: svcErr } = await supabase.from("appointment_services").insert(
+        allSelectedServices.map((svc) => ({
+          appointment_id: inserted.id,
+          service_id: svc.id,
+          service_name: svc.name,
+          price: svc.price,
+          cost: 0,
+          duration_minutes: svc.duration_minutes,
+          is_hof: svc.is_hof,
+        })),
+      );
+      if (svcErr) console.error("[agendar] appointment_services:", svcErr.message);
+    }
+
     setSaving(false);
-
-    if (error) return setFormError("Erro ao confirmar agendamento: " + error.message);
-
     setConfirmed({
       name: name.trim(),
-      service: svc?.name ?? "Procedimento",
+      services: allSelectedServices.map((s) => s.name),
       date: format(new Date(`${date}T00:00:00`), "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR }),
       time,
+      totalPrice,
     });
   };
 
   const resetForm = () => {
-    setName(""); setPhone(""); setServiceId("none"); setDate(""); setTime("");
-    setAnticipate(false); setNotes(""); setFormError(null); setConfirmed(null); setDayAppts([]);
+    setName(""); setPhone(""); setServiceId("none"); setExtraServices([]);
+    setDate(""); setTime(""); setAnticipate(false); setNotes("");
+    setFormError(null); setConfirmed(null); setDayAppts([]);
   };
 
   // ── Confirmation screen ──────────────────────────────────────────────────
   if (confirmed) {
+    const hasPrice = confirmed.totalPrice > 0;
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#F8F0ED] px-6 py-12">
         <div className="w-full max-w-sm text-center">
@@ -232,19 +362,33 @@ function AgendarPage() {
           <p className="mt-2 text-sm text-[#83715D]">Obrigada pela preferência 🎉</p>
 
           <div className="mt-6 rounded-2xl border border-[#D0C7B6] bg-white p-5 text-left space-y-4">
-            {(
-              [
-                { label: "Nome",    value: confirmed.name },
-                { label: "Serviço", value: confirmed.service },
-                { label: "Data",    value: <span className="capitalize">{confirmed.date}</span> },
-                { label: "Horário", value: confirmed.time },
-              ] as const
-            ).map(({ label, value }) => (
-              <div key={label}>
-                <div className="text-xs font-medium uppercase tracking-wider text-[#AC9D8A]">{label}</div>
-                <div className="mt-0.5 text-sm font-semibold text-[#83715D]">{value}</div>
+            <div>
+              <div className="text-xs font-medium uppercase tracking-wider text-[#AC9D8A]">Nome</div>
+              <div className="mt-0.5 text-sm font-semibold text-[#83715D]">{confirmed.name}</div>
+            </div>
+            <div>
+              <div className="text-xs font-medium uppercase tracking-wider text-[#AC9D8A]">
+                {confirmed.services.length > 1 ? "Serviços" : "Serviço"}
               </div>
-            ))}
+              <div className="mt-0.5 space-y-0.5">
+                {confirmed.services.map((s, i) => (
+                  <div key={i} className="text-sm font-semibold text-[#83715D]">{s}</div>
+                ))}
+              </div>
+              {hasPrice && (
+                <div className="mt-1 text-xs text-[#AC9D8A]">
+                  Total: <span className="font-semibold text-[#83715D]">R$ {confirmed.totalPrice.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+            <div>
+              <div className="text-xs font-medium uppercase tracking-wider text-[#AC9D8A]">Data</div>
+              <div className="mt-0.5 text-sm font-semibold text-[#83715D] capitalize">{confirmed.date}</div>
+            </div>
+            <div>
+              <div className="text-xs font-medium uppercase tracking-wider text-[#AC9D8A]">Horário</div>
+              <div className="mt-0.5 text-sm font-semibold text-[#83715D]">{confirmed.time}</div>
+            </div>
           </div>
 
           <p className="mt-5 text-sm text-[#83715D]">
@@ -308,67 +452,62 @@ function AgendarPage() {
               />
             </Field>
 
-            {/* Serviço */}
-            <Field label="Serviço *">
+            {/* Serviços */}
+            <Field label="Serviço(s) *">
               {initialLoading ? (
                 <div className="h-11 animate-pulse rounded-lg bg-[#EDE0D4]" />
               ) : (
-                <div ref={dropRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setDropOpen((v) => !v)}
-                    className="flex w-full items-center justify-between rounded-md border border-[#D0C7B6] bg-white px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-[#B5936E] focus:ring-offset-2 transition"
-                  >
-                    <span className={selectedService ? "text-[#83715D]" : "text-[#AC9D8A]"}>
-                      {selectedService ? selectedService.name : "Selecione um serviço..."}
-                    </span>
-                    <ChevronDown
-                      size={15}
-                      className={`text-[#AC9D8A] transition-transform duration-150 ${dropOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
+                <div className="space-y-2">
+                  {/* Serviço principal */}
+                  <ServicePicker
+                    services={services}
+                    grupos={grupos}
+                    value={serviceId}
+                    onChange={(id) => { setServiceId(id); setTime(""); }}
+                  />
 
-                  {dropOpen && (
-                    <div className="absolute left-0 right-0 top-full z-[200] mt-1 max-h-72 overflow-y-auto rounded-xl border border-[#D0C7B6] bg-white shadow-2xl">
-                      {grupos.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-sm text-[#AC9D8A]">
-                          Nenhum serviço disponível
-                        </div>
-                      ) : (
-                        grupos.map((grupo) => (
-                          <div key={grupo.value}>
-                            <button
-                              type="button"
-                              className="flex w-full cursor-default items-center px-3 py-2"
-                            >
-                              <span className="text-sm font-semibold" style={{ color: "#83715D" }}>
-                                {grupo.label}
-                              </span>
-                            </button>
-                            {grupo.items.map((svc) => (
-                              <button
-                                key={svc.id}
-                                type="button"
-                                onClick={() => { setServiceId(svc.id); setDropOpen(false); setTime(""); }}
-                                className={`flex w-full items-center justify-between px-5 py-2.5 text-left text-sm transition-colors hover:bg-[#F8F0ED] ${
-                                  serviceId === svc.id ? "bg-[#F8F0ED] text-[#83715D]" : "text-[#83715D]"
-                                }`}
-                              >
-                                <span>{svc.name}</span>
-                                <div className="ml-2 flex shrink-0 items-center gap-2 text-xs text-[#AC9D8A]">
-                                  <span className="flex items-center gap-0.5">
-                                    <Clock size={11} />{svc.duration_minutes}min
-                                  </span>
-                                  <span>
-                                    {svc.is_hof && Number(svc.price) === 0
-                                      ? "Sob avaliação"
-                                      : `R$ ${Number(svc.price).toFixed(2)}`}
-                                  </span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        ))
+                  {/* Serviços extras */}
+                  {extraServices.map((eid, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <div className="flex-1">
+                        <ServicePicker
+                          services={services}
+                          grupos={grupos}
+                          value={eid}
+                          onChange={(id) => { updateExtraService(idx, id); setTime(""); }}
+                          placeholder="Selecione serviço adicional..."
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => { removeExtraService(idx); setTime(""); }}
+                        className="flex h-[38px] w-9 shrink-0 items-center justify-center rounded-md border border-[#D0C7B6] text-[#AC9D8A] transition-colors hover:border-red-300 hover:text-red-500"
+                        aria-label="Remover serviço"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+
+                  {/* Botão adicionar */}
+                  {serviceId !== "none" && (
+                    <button
+                      type="button"
+                      onClick={addExtraService}
+                      className="flex items-center gap-1.5 text-xs font-medium text-[#B5936E] transition-colors hover:text-[#83715D]"
+                    >
+                      <Plus size={13} /> Adicionar outro serviço
+                    </button>
+                  )}
+
+                  {/* Resumo duração + preço */}
+                  {allSelectedServices.length > 1 && (
+                    <div className="flex items-center justify-between rounded-lg border border-[#D0C7B6] bg-[#F8F0ED] px-3 py-2 text-xs text-[#83715D]">
+                      <span className="flex items-center gap-1">
+                        <Clock size={11} /> {totalDuration}min no total
+                      </span>
+                      {totalPrice > 0 && (
+                        <span className="font-semibold">R$ {totalPrice.toFixed(2)}</span>
                       )}
                     </div>
                   )}

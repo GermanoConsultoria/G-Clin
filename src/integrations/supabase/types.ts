@@ -49,6 +49,57 @@ export type Database = {
           },
         ]
       }
+      appointment_services: {
+        Row: {
+          appointment_id: string
+          cost: number
+          created_at: string
+          duration_minutes: number
+          id: string
+          is_hof: boolean
+          price: number
+          service_id: string | null
+          service_name: string | null
+        }
+        Insert: {
+          appointment_id: string
+          cost?: number
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          is_hof?: boolean
+          price?: number
+          service_id?: string | null
+          service_name?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          cost?: number
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          is_hof?: boolean
+          price?: number
+          service_id?: string | null
+          service_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_services_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_services_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           category: string | null
