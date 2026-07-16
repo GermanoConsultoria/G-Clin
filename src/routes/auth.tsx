@@ -57,7 +57,7 @@ function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAF6F1] p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#F8F0ED] p-6">
       <div className="w-full max-w-md space-y-6">
 
         {/* Logo */}
@@ -65,13 +65,13 @@ function AuthPage() {
           <img
             src={logoGabriela}
             alt="THARINE SOUZA BEAUTY ARTIST"
-            className="h-24 w-24 rounded-full border-4 border-[#C8A56A] object-cover shadow-lg"
+            className="h-24 w-24 rounded-full border-4 border-[#B5936E] object-cover shadow-lg"
             style={{ boxShadow: "0 4px 24px rgba(200,165,106,0.25)" }}
           />
           <div className="flex items-center gap-2">
             <div
               className="grid h-8 w-8 place-items-center rounded-lg text-white"
-              style={{ background: "linear-gradient(135deg, #D8BC85 0%, #C8A56A 50%, #A87C3F 100%)" }}
+              style={{ background: "linear-gradient(135deg, #AC9D8A 0%, #B5936E 50%, #83715D 100%)" }}
             >
               <img
                 src={logoGabriela}
@@ -79,19 +79,19 @@ function AuthPage() {
                 className="h-6 w-6 rounded object-cover"
               />
             </div>
-            <span className="font-display text-xl font-bold text-[#4B3A2A]">G-Clin</span>
+            <span className="font-display text-xl font-bold text-[#83715D]">G-Clin</span>
           </div>
-          <p className="text-sm text-[#6E5A45]">THARINE SOUZA BEAUTY ARTIST</p>
+          <p className="text-sm text-[#83715D]">THARINE SOUZA BEAUTY ARTIST</p>
         </Link>
 
         {/* Card de login */}
-        <div className="rounded-2xl border border-[#E7D5C1] bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-[#D0C7B6] bg-white p-6 shadow-sm">
           <Tabs defaultValue="signin">
-            <TabsList className="grid w-full grid-cols-2 bg-[#F3E7D7]">
-              <TabsTrigger value="signin" className="data-[state=active]:bg-[#C8A56A] data-[state=active]:text-white">
+            <TabsList className="grid w-full grid-cols-2 bg-[#EDE0D4]">
+              <TabsTrigger value="signin" className="data-[state=active]:bg-[#B5936E] data-[state=active]:text-white">
                 Entrar
               </TabsTrigger>
-              <TabsTrigger value="signup" className="data-[state=active]:bg-[#C8A56A] data-[state=active]:text-white">
+              <TabsTrigger value="signup" className="data-[state=active]:bg-[#B5936E] data-[state=active]:text-white">
                 Criar conta
               </TabsTrigger>
             </TabsList>
@@ -104,7 +104,7 @@ function AuthPage() {
                   type="submit"
                   disabled={loading}
                   className="w-full text-white font-semibold"
-                  style={{ background: "linear-gradient(135deg, #D8BC85 0%, #C8A56A 50%, #A87C3F 100%)" }}
+                  style={{ background: "linear-gradient(135deg, #AC9D8A 0%, #B5936E 50%, #83715D 100%)" }}
                 >
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
@@ -119,7 +119,7 @@ function AuthPage() {
                   type="submit"
                   disabled={loading}
                   className="w-full text-white font-semibold"
-                  style={{ background: "linear-gradient(135deg, #D8BC85 0%, #C8A56A 50%, #A87C3F 100%)" }}
+                  style={{ background: "linear-gradient(135deg, #AC9D8A 0%, #B5936E 50%, #83715D 100%)" }}
                 >
                   {loading ? "Criando..." : "Criar conta"}
                 </Button>
@@ -129,10 +129,10 @@ function AuthPage() {
         </div>
 
         {/* Rodapé */}
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-[#E7D5C1] bg-white/60 p-4 text-center">
-          <span className="text-xs uppercase tracking-widest text-[#6E5A45]">Desenvolvido por</span>
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-[#D0C7B6] bg-white/60 p-4 text-center">
+          <span className="text-xs uppercase tracking-widest text-[#83715D]">Desenvolvido por</span>
           <img src={gtechLogo} alt="G-Tech" className="h-14 w-14 rounded-lg shadow-sm" />
-          <span className="font-display text-base font-bold tracking-wide text-[#4B3A2A]">G-Tech</span>
+          <span className="font-display text-base font-bold tracking-wide text-[#83715D]">G-Tech</span>
         </div>
 
       </div>
@@ -150,14 +150,14 @@ function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-[#4B3A2A]">{label}</Label>
+      <Label className="text-[#83715D]">{label}</Label>
       <Input
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required
         minLength={type === "password" ? 8 : undefined}
-        className="border-[#E7D5C1] focus-visible:ring-[#C8A56A] bg-[#FAF6F1]"
+        className="border-[#D0C7B6] focus-visible:ring-[#B5936E] bg-[#F8F0ED]"
       />
     </div>
   );

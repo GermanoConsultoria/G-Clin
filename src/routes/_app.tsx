@@ -53,9 +53,9 @@ function NavItem({
       onClick={() => setMobileOpen(false)}
       className={`flex items-center rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
         isCollapsed ? "justify-center" : "justify-start gap-3"
-      } ${active ? "bg-[#C8A56A]/10 text-[#C8A56A]" : "text-gray-700 hover:bg-black/5"}`}
+      } ${active ? "bg-[#B5936E]/10 text-[#B5936E]" : "text-gray-700 hover:bg-black/5"}`}
     >
-      <item.icon className={`h-6 w-6 shrink-0 ${active ? "text-[#C8A56A]" : "text-[#A87C3F]"}`} />
+      <item.icon className={`h-6 w-6 shrink-0 ${active ? "text-[#B5936E]" : "text-[#83715D]"}`} />
       {!isCollapsed && <span className="whitespace-nowrap">{item.label}</span>}
     </Link>
   );
@@ -90,27 +90,27 @@ function AppLayout() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#FAF6F1] shadow-xl transition-all duration-300 ease-in-out lg:static
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-[#F8F0ED] shadow-xl transition-all duration-300 ease-in-out lg:static
           ${mobileOpen ? "translate-x-0 w-72" : "-translate-x-full lg:translate-x-0"}
           ${isCollapsed ? "lg:w-20" : "lg:w-72"}
         `}
       >
         {/* Cabeçalho da Sidebar */}
-        <div className="flex h-20 items-center justify-between px-4 border-b border-[#C8A56A]/10">
+        <div className="flex h-20 items-center justify-between px-4 border-b border-[#B5936E]/10">
           <div className={`flex items-center gap-3 overflow-hidden transition-opacity duration-300 ${isCollapsed ? "opacity-0 w-0 hidden lg:flex" : "opacity-100 w-auto"}`}>
             <img
               src={logoGabriela}
               alt="Dra. Tharine Souza"
-              className="h-10 w-10 shrink-0 rounded-full border border-[#C8A56A] object-cover"
+              className="h-10 w-10 shrink-0 rounded-full border border-[#B5936E] object-cover"
             />
             <div className="flex flex-col">
-              <span className="font-display text-sm font-bold text-[#A87C3F] whitespace-nowrap">Dra. Tharine Souza</span>
+              <span className="font-display text-sm font-bold text-[#83715D] whitespace-nowrap">Dra. Tharine Souza</span>
             </div>
           </div>
           
           {/* Botão Hamburger Desktop */}
           <button
-            className="hidden lg:flex p-2 rounded-md text-[#A87C3F] hover:bg-black/5 transition-colors mx-auto"
+            className="hidden lg:flex p-2 rounded-md text-[#83715D] hover:bg-black/5 transition-colors mx-auto"
             onClick={() => setIsCollapsed(!isCollapsed)}
           >
             <Menu className="h-6 w-6" />
@@ -139,10 +139,10 @@ function AppLayout() {
             />
           ))}
 
-          <div className="my-2 border-t border-[#C8A56A]/20" />
+          <div className="my-2 border-t border-[#B5936E]/20" />
 
           {/* Módulo Financeiro */}
-          {!isCollapsed && <span className="px-4 text-xs font-bold text-[#A87C3F]/60 uppercase tracking-wider mt-2 mb-1">Finanças</span>}
+          {!isCollapsed && <span className="px-4 text-xs font-bold text-[#83715D]/60 uppercase tracking-wider mt-2 mb-1">Finanças</span>}
           {financeItems.map((item) => (
             <NavItem 
               key={item.to} 
@@ -153,10 +153,10 @@ function AppLayout() {
             />
           ))}
 
-          <div className="my-2 border-t border-[#C8A56A]/20" />
+          <div className="my-2 border-t border-[#B5936E]/20" />
 
           {/* Módulo Sistema */}
-          {!isCollapsed && <span className="px-4 text-xs font-bold text-[#A87C3F]/60 uppercase tracking-wider mt-2 mb-1">Sistema</span>}
+          {!isCollapsed && <span className="px-4 text-xs font-bold text-[#83715D]/60 uppercase tracking-wider mt-2 mb-1">Sistema</span>}
           {configItems.map((item) => (
             <NavItem 
               key={item.to} 
@@ -170,7 +170,7 @@ function AppLayout() {
         </nav>
 
         {/* Rodapé da Sidebar */}
-        <div className="border-t border-[#C8A56A]/20 p-3">
+        <div className="border-t border-[#B5936E]/20 p-3">
           <button
             onClick={() => supabase.auth.signOut().then(() => nav({ to: "/" }))}
             title={isCollapsed ? "Sair" : undefined}
@@ -189,13 +189,13 @@ function AppLayout() {
         
         {/* Header Mobile */}
         <header className="flex h-16 items-center justify-between border-b bg-white px-4 lg:hidden shadow-sm">
-          <div className="flex items-center gap-3 font-display font-bold text-[#A87C3F]">
-            <img src={logoGabriela} alt="Dra. Tharine Souza" className="h-9 w-9 rounded-full border border-[#C8A56A] object-cover" />
+          <div className="flex items-center gap-3 font-display font-bold text-[#83715D]">
+            <img src={logoGabriela} alt="Dra. Tharine Souza" className="h-9 w-9 rounded-full border border-[#B5936E] object-cover" />
             Dra. Tharine Souza
           </div>
           <button
             onClick={() => setMobileOpen(true)}
-            className="rounded-md p-2 text-[#A87C3F] hover:bg-gray-100 transition-colors"
+            className="rounded-md p-2 text-[#83715D] hover:bg-gray-100 transition-colors"
           >
             <Menu className="h-6 w-6" />
           </button>

@@ -46,7 +46,7 @@ const fileIcon = (tipo: string | null) =>
 
 function Secao({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-6 mb-3 text-xs font-bold uppercase tracking-widest text-[#A87C3F] border-b border-[#C8A56A]/20 pb-1">
+    <p className="mt-6 mb-3 text-xs font-bold uppercase tracking-widest text-[#83715D] border-b border-[#B5936E]/20 pb-1">
       {children}
     </p>
   );
@@ -76,7 +76,7 @@ function FInput({
       onChange={onChange}
       placeholder={placeholder}
       disabled={disabled}
-      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#C8A56A] focus:outline-none disabled:opacity-60"
+      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#B5936E] focus:outline-none disabled:opacity-60"
     />
   );
 }
@@ -96,7 +96,7 @@ function FTextarea({
       onChange={onChange}
       placeholder={placeholder}
       rows={2}
-      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#C8A56A] focus:outline-none resize-none"
+      className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#B5936E] focus:outline-none resize-none"
     />
   );
 }
@@ -116,10 +116,10 @@ function YN({
     <div className="flex items-center gap-4 py-1.5 border-b border-gray-50">
       <span className="flex-1 text-sm text-gray-700">{label}</span>
       <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-        <input type="radio" name={name} checked={value} onChange={() => onChange(true)} className="accent-[#A87C3F]" /> Sim
+        <input type="radio" name={name} checked={value} onChange={() => onChange(true)} className="accent-[#83715D]" /> Sim
       </label>
       <label className="flex items-center gap-1.5 text-sm cursor-pointer">
-        <input type="radio" name={name} checked={!value} onChange={() => onChange(false)} className="accent-[#A87C3F]" /> Não
+        <input type="radio" name={name} checked={!value} onChange={() => onChange(false)} className="accent-[#83715D]" /> Não
       </label>
     </div>
   );
@@ -625,7 +625,7 @@ function PacienteDetalhe() {
 
   if (loading) return (
     <div className="flex h-64 items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-[#C8A56A]" />
+      <Loader2 className="h-8 w-8 animate-spin text-[#B5936E]" />
     </div>
   );
   if (!paciente) return null;
@@ -636,20 +636,20 @@ function PacienteDetalhe() {
       {/* Voltar */}
       <button
         onClick={() => navigate({ to: "/pacientes" as never })}
-        className="mb-6 flex items-center gap-2 text-sm text-[#A87C3F] hover:underline"
+        className="mb-6 flex items-center gap-2 text-sm text-[#83715D] hover:underline"
       >
         <ArrowLeft className="h-4 w-4" /> Voltar para Pacientes
       </button>
 
       {/* Card do Paciente */}
-      <div className="mb-6 rounded-2xl border border-[#C8A56A]/20 bg-white p-6 shadow-sm">
+      <div className="mb-6 rounded-2xl border border-[#B5936E]/20 bg-white p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#C8A56A]/15 text-[#A87C3F] font-bold text-2xl">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#B5936E]/15 text-[#83715D] font-bold text-2xl">
               {paciente.nome.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <h1 className="font-display text-2xl font-bold text-[#A87C3F]">{paciente.nome}</h1>
+              <h1 className="font-display text-2xl font-bold text-[#83715D]">{paciente.nome}</h1>
               <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5">
                 {paciente.data_nasc && (
                   <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -681,7 +681,7 @@ function PacienteDetalhe() {
 
           <button
             onClick={() => { setFichaEditId(null); setShowAnamnese(true); setAba("anamnese"); }}
-            className="flex shrink-0 items-center gap-2 rounded-xl bg-[#A87C3F] px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#8B6735] transition-colors"
+            className="flex shrink-0 items-center gap-2 rounded-xl bg-[#83715D] px-4 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#6B5D4F] transition-colors"
           >
             <Plus className="h-4 w-4" />
             Adicionar Prontuário
@@ -702,14 +702,14 @@ function PacienteDetalhe() {
               onClick={() => setAba(key)}
               className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
                 aba === key
-                  ? "bg-white text-[#A87C3F] shadow-sm"
+                  ? "bg-white text-[#83715D] shadow-sm"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
               <cfg.Icon className="h-4 w-4" />
               {cfg.label}
               <span className={`rounded-full px-1.5 py-0.5 text-xs ${
-                aba === key ? "bg-[#C8A56A]/15 text-[#A87C3F]" : "bg-gray-200 text-gray-500"
+                aba === key ? "bg-[#B5936E]/15 text-[#83715D]" : "bg-gray-200 text-gray-500"
               }`}>
                 {cfg.count}
               </span>
@@ -722,9 +722,9 @@ function PacienteDetalhe() {
       {aba === "anamnese" && (
         <div>
           {fichas.length === 0 ? (
-            <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-[#C8A56A]/30 py-24 text-center">
-              <div className="rounded-full bg-[#C8A56A]/10 p-4">
-                <ClipboardList className="h-8 w-8 text-[#C8A56A]" />
+            <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-[#B5936E]/30 py-24 text-center">
+              <div className="rounded-full bg-[#B5936E]/10 p-4">
+                <ClipboardList className="h-8 w-8 text-[#B5936E]" />
               </div>
               <div>
                 <p className="font-semibold text-gray-700">Nenhum prontuário cadastrado</p>
@@ -732,7 +732,7 @@ function PacienteDetalhe() {
               </div>
               <button
                 onClick={() => { setFichaEditId(null); setShowAnamnese(true); }}
-                className="flex items-center gap-2 rounded-xl bg-[#A87C3F] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#8B6735] transition-colors"
+                className="flex items-center gap-2 rounded-xl bg-[#83715D] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#6B5D4F] transition-colors"
               >
                 <FilePlus className="h-4 w-4" /> Adicionar Prontuário
               </button>
@@ -743,7 +743,7 @@ function PacienteDetalhe() {
                 <div
                   key={f.id}
                   onClick={() => { setFichaEditId(f.id); setShowAnamnese(true); }}
-                  className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm text-left hover:border-[#C8A56A]/40 hover:shadow-md transition-all cursor-pointer"
+                  className="flex items-center gap-4 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm text-left hover:border-[#B5936E]/40 hover:shadow-md transition-all cursor-pointer"
                 >
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 font-bold text-lg">
                     {fichas.length - i}
@@ -764,7 +764,7 @@ function PacienteDetalhe() {
                         if (data) await gerarPDF(data as FichaData, paciente!);
                         setDownloadingPdf(null);
                       }}
-                      className="flex items-center gap-1.5 rounded-lg border border-[#C8A56A] px-3 py-1.5 text-xs font-medium text-[#A87C3F] hover:bg-[#C8A56A]/10 transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg border border-[#B5936E] px-3 py-1.5 text-xs font-medium text-[#83715D] hover:bg-[#B5936E]/10 transition-colors"
                       title="Baixar PDF"
                     >
                       {downloadingPdf === f.id
@@ -774,7 +774,7 @@ function PacienteDetalhe() {
                     </button>
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                      <span className="text-xs font-medium text-[#A87C3F]">Ver / Editar →</span>
+                      <span className="text-xs font-medium text-[#83715D]">Ver / Editar →</span>
                     </div>
                   </div>
                 </div>
@@ -789,14 +789,14 @@ function PacienteDetalhe() {
         <div>
           <div
             onClick={() => fileRef.current?.click()}
-            className="mb-5 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[#C8A56A]/40 bg-[#FDF8F2] py-10 text-center transition-colors hover:border-[#C8A56A] hover:bg-[#FDF5EC]"
+            className="mb-5 flex cursor-pointer flex-col items-center gap-3 rounded-2xl border-2 border-dashed border-[#B5936E]/40 bg-[#F8F0ED] py-10 text-center transition-colors hover:border-[#B5936E] hover:bg-[#F8F0ED]"
           >
             {uploading
-              ? <Loader2 className="h-8 w-8 animate-spin text-[#C8A56A]" />
-              : <Upload className="h-8 w-8 text-[#C8A56A]" />
+              ? <Loader2 className="h-8 w-8 animate-spin text-[#B5936E]" />
+              : <Upload className="h-8 w-8 text-[#B5936E]" />
             }
             <div>
-              <p className="font-semibold text-[#A87C3F]">{uploading ? "Enviando..." : "Clique para enviar arquivos"}</p>
+              <p className="font-semibold text-[#83715D]">{uploading ? "Enviando..." : "Clique para enviar arquivos"}</p>
               <p className="text-xs text-muted-foreground mt-1">PDF, imagens, documentos — qualquer formato</p>
             </div>
           </div>
@@ -819,7 +819,7 @@ function PacienteDetalhe() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => handleVisualizar(a.url)}
-                      className="rounded-lg p-1.5 text-[#A87C3F] hover:bg-[#C8A56A]/10"
+                      className="rounded-lg p-1.5 text-[#83715D] hover:bg-[#B5936E]/10"
                       title="Visualizar"
                     >
                       <Eye className="h-4 w-4" />
@@ -828,7 +828,7 @@ function PacienteDetalhe() {
                       href={a.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="rounded-lg p-1.5 text-[#A87C3F] hover:bg-[#C8A56A]/10"
+                      className="rounded-lg p-1.5 text-[#83715D] hover:bg-[#B5936E]/10"
                       title="Baixar"
                     >
                       <Download className="h-4 w-4" />
@@ -1015,10 +1015,10 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
       <div className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl">
 
         {/* Header */}
-        <div className="rounded-t-2xl border-b border-[#C8A56A]/20 bg-white px-6 py-4">
+        <div className="rounded-t-2xl border-b border-[#B5936E]/20 bg-white px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="font-display text-lg font-bold text-[#A87C3F]">Ficha de Avaliação Geral</h2>
+              <h2 className="font-display text-lg font-bold text-[#83715D]">Ficha de Avaliação Geral</h2>
               <p className="text-xs text-muted-foreground">Dra. Tharine Souza · {paciente.nome}</p>
             </div>
             <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100">
@@ -1159,7 +1159,7 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
           <div className="mt-3">
             <FL>Funcionamento intestinal</FL>
             <select value={str("funcionamento_intestinal")} onChange={sel("funcionamento_intestinal")}
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#C8A56A] focus:outline-none">
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#B5936E] focus:outline-none">
               <option value="">Selecione</option>
               <option>1-2 vezes / semana</option>
               <option>3-4 vezes / semana</option>
@@ -1172,7 +1172,7 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
             <div className="mt-3">
               <FL>Qualidade do sono</FL>
               <select value={str("qualidade_sono")} onChange={sel("qualidade_sono")}
-                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#C8A56A] focus:outline-none">
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#B5936E] focus:outline-none">
                 <option value="">Selecione</option>
                 <option>Boa</option><option>Regular</option><option>Péssima</option>
               </select>
@@ -1192,7 +1192,7 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
           <div className="mt-3">
             <FL>Tipo de alimentação</FL>
             <select value={str("tipo_alimentacao")} onChange={sel("tipo_alimentacao")}
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#C8A56A] focus:outline-none">
+              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm focus:border-[#B5936E] focus:outline-none">
               <option value="">Selecione</option>
               <option>Vegano</option><option>Vegetariano</option><option>Convencional</option>
               <option>Low Carb</option><option>Outro</option>
@@ -1344,11 +1344,11 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
             serão dadas como realizadas. Além disso, autorizo a utilização de uso de imagem.
           </p>
           <label className="flex cursor-pointer items-start gap-3">
-            <input type="checkbox" checked={bool("autorizado")} onChange={chk("autorizado")} className="mt-0.5 accent-[#A87C3F] h-4 w-4" />
+            <input type="checkbox" checked={bool("autorizado")} onChange={chk("autorizado")} className="mt-0.5 accent-[#83715D] h-4 w-4" />
             <span className="text-sm text-gray-700">A paciente confirma e autoriza os procedimentos</span>
           </label>
           <label className="mt-2 flex cursor-pointer items-start gap-3">
-            <input type="checkbox" checked={bool("autoriza_imagem")} onChange={chk("autoriza_imagem")} className="mt-0.5 accent-[#A87C3F] h-4 w-4" />
+            <input type="checkbox" checked={bool("autoriza_imagem")} onChange={chk("autoriza_imagem")} className="mt-0.5 accent-[#83715D] h-4 w-4" />
             <span className="text-sm text-gray-700">Autoriza uso de imagem</span>
           </label>
           <Row2>
@@ -1364,14 +1364,14 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
         </div>{/* end body */}
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 rounded-b-2xl border-t border-[#C8A56A]/20 bg-white px-6 py-4">
+        <div className="flex justify-end gap-3 rounded-b-2xl border-t border-[#B5936E]/20 bg-white px-6 py-4">
           <button onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100">
             Cancelar
           </button>
           {fichaId && (
             <button
               onClick={handleDownloadPDF}
-              className="flex items-center gap-2 rounded-lg border border-[#C8A56A] px-5 py-2 text-sm font-semibold text-[#A87C3F] hover:bg-[#C8A56A]/10 transition-colors"
+              className="flex items-center gap-2 rounded-lg border border-[#B5936E] px-5 py-2 text-sm font-semibold text-[#83715D] hover:bg-[#B5936E]/10 transition-colors"
             >
               <Download className="h-4 w-4" />
               Baixar PDF
@@ -1380,7 +1380,7 @@ function AnamneseModal({ paciente, fichaId, userId, onClose, onSaved }: {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 rounded-lg bg-[#A87C3F] px-5 py-2 text-sm font-semibold text-white hover:bg-[#8B6735] disabled:opacity-60"
+            className="flex items-center gap-2 rounded-lg bg-[#83715D] px-5 py-2 text-sm font-semibold text-white hover:bg-[#6B5D4F] disabled:opacity-60"
           >
             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
             Salvar Ficha

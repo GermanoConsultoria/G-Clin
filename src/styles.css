@@ -51,26 +51,26 @@
   --card-foreground:     #1A1614;
   --popover-foreground:  #1A1614;
 
-  /* Primária — dourado escuro (contraste 7:1) */
-  --primary:             #7C5C1E;
+  /* Primária — marrom escuro */
+  --primary:             #83715D;
   --primary-foreground:  #FFFFFF;
 
   /* Secundária */
-  --secondary:           #F0EBE2;
-  --secondary-foreground:#4A3A28;
+  --secondary:           #F8F0ED;
+  --secondary-foreground:#83715D;
 
   /* Muted */
-  --muted:               #E8E6E3;
-  --muted-foreground:    #888072;
+  --muted:               #D0C7B6;
+  --muted-foreground:    #AC9D8A;
 
-  /* Accent — dourado claro decorativo */
-  --accent:              #F5EDE0;
-  --accent-foreground:   #5C4318;
+  /* Accent — caramelo decorativo */
+  --accent:              #F8F0ED;
+  --accent-foreground:   #83715D;
 
   /* Bordas e inputs */
-  --border:              #E8E6E3;
-  --input:               #F0EBE2;
-  --ring:                #C9A96E;
+  --border:              #D0C7B6;
+  --input:               #F8F0ED;
+  --ring:                #B5936E;
 
   /* Status */
   --destructive:         #C0392B;
@@ -83,7 +83,7 @@
   --whatsapp-foreground: #FFFFFF;
 
   /* Decorativo */
-  --gold-mid:            #C9A96E;
+  --gold-mid:            #B5936E;
   --shadow-card:   0 1px 4px rgba(0,0,0,0.07);
 }
 
@@ -105,10 +105,10 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #E7D5C1;
+    background: #D0C7B6;
     border-radius: 999px;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #C8A56A;
+    background: #B5936E;
   }
 }

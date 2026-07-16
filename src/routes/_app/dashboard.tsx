@@ -837,12 +837,12 @@ function ServicoSelect({
                 onClick={() => toggleGrupo(grupo.value)}
                 className="flex w-full items-center justify-between px-3 py-2 hover:bg-muted/30 transition-colors"
               >
-                <span className="text-sm font-semibold" style={{ color: "#A87C3F" }}>
+                <span className="text-sm font-semibold" style={{ color: "#83715D" }}>
                   {grupo.label}
                 </span>
                 <ChevronDown
                   size={13}
-                  style={{ color: "#C8A56A" }}
+                  style={{ color: "#B5936E" }}
                   className={`transition-transform duration-150 ${expandidos[grupo.value] ? "rotate-180" : ""}`}
                 />
               </button>
