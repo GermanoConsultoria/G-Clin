@@ -23,7 +23,7 @@ type Appointment = {
   id: string;
   client_name: string;
   phone: string;
-  status: "agendado" | "confirmado" | "concluido" | "cancelado" | "falta";
+  status: "agendado" | "confirmado" | "concluido" | "cancelado" | "falta" | "pendente_pagamento";
   service_name: string | null;
   type: "procedimento" | "avaliacao" | "retorno" | "encaixe";
   scheduled_at: string;
@@ -41,11 +41,12 @@ const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const statusConfig = {
-  agendado:  { label: "Aguardando", cls: "bg-purple-50 text-purple-700 border-purple-200" },
-  confirmado: { label: "Confirmado", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  concluido: { label: "Concluído",  cls: "bg-gray-100 text-gray-600 border-gray-200" },
-  cancelado: { label: "Cancelado",  cls: "bg-red-50 text-red-600 border-red-200" },
-  falta:     { label: "Falta",      cls: "bg-red-50 text-red-600 border-red-200" },
+  agendado:           { label: "Aguardando",     cls: "bg-purple-50 text-purple-700 border-purple-200" },
+  confirmado:         { label: "Confirmado",     cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  concluido:          { label: "Concluído",      cls: "bg-gray-100 text-gray-600 border-gray-200" },
+  cancelado:          { label: "Cancelado",      cls: "bg-red-50 text-red-600 border-red-200" },
+  falta:              { label: "Falta",          cls: "bg-red-50 text-red-600 border-red-200" },
+  pendente_pagamento: { label: "Pend. Pagamento",cls: "bg-orange-50 text-orange-700 border-orange-200" },
 } as const;
 
 // ─── Componentes auxiliares ────────────────────────────────────────────────
@@ -137,12 +138,15 @@ function FinRow({
   );
 }
 
-function CustomTooltip({ active, payload, label }: any) {
+type TooltipEntry = { name: string; value: number; fill: string };
+type CustomTooltipProps = { active?: boolean; payload?: TooltipEntry[]; label?: string };
+
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border bg-card p-3 shadow-lg text-xs space-y-1">
       <div className="font-semibold text-foreground mb-1 capitalize">{label}</div>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <div key={p.name} className="flex items-center gap-2">
           <div className="h-2 w-2 rounded-full" style={{ background: p.fill }} />
           <span className="text-muted-foreground">{p.name}:</span>
@@ -211,8 +215,10 @@ function Overview() {
   const todayStats = useMemo(() => {
     const total      = todayAppts.length;
     const concluidos = todayAppts.filter((a) => a.status === "concluido").length;
-    const confirmados = todayAppts.filter((a) => a.status === "confirmado").length;
-    const aguardando = todayAppts.filter((a) => a.status === "agendado").length;
+    // confirmados inclui concluídos (atendimento concluído necessariamente foi confirmado)
+    const confirmados = todayAppts.filter((a) => a.status === "confirmado" || a.status === "concluido").length;
+    // aguardando inclui pendente_pagamento (ainda não confirmado/finalizado)
+    const aguardando = todayAppts.filter((a) => a.status === "agendado" || a.status === "pendente_pagamento").length;
     const problemas  = todayAppts.filter((a) => a.status === "cancelado" || a.status === "falta").length;
     const progresso  = total > 0 ? Math.round((concluidos / total) * 100) : 0;
     return { total, concluidos, confirmados, aguardando, problemas, progresso };
@@ -222,7 +228,7 @@ function Overview() {
   const proximosHoje = useMemo(
     () =>
       todayAppts
-        .filter((a) => a.status === "agendado" || a.status === "confirmado")
+        .filter((a) => a.status === "agendado" || a.status === "confirmado" || a.status === "pendente_pagamento")
         .slice(0, 5),
     [todayAppts],
   );

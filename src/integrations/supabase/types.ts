@@ -105,6 +105,7 @@ export type Database = {
           category: string | null
           client_name: string
           created_at: string
+          deposit_amount: number
           extra_charge: boolean
           id: string
           notes: string | null
@@ -122,6 +123,7 @@ export type Database = {
           category?: string | null
           client_name: string
           created_at?: string
+          deposit_amount?: number
           extra_charge?: boolean
           id?: string
           notes?: string | null
@@ -139,6 +141,7 @@ export type Database = {
           category?: string | null
           client_name?: string
           created_at?: string
+          deposit_amount?: number
           extra_charge?: boolean
           id?: string
           notes?: string | null
@@ -571,6 +574,36 @@ export type Database = {
           modulos?: string[]
           role?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      service_categories: {
+        Row: {
+          id: string
+          user_id: string
+          value: string
+          label: string
+          color_class: string | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          value: string
+          label: string
+          color_class?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          value?: string
+          label?: string
+          color_class?: string | null
+          sort_order?: number
+          created_at?: string
         }
         Relationships: []
       }

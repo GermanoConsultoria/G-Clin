@@ -23,7 +23,7 @@ type DayAppt = {
   service_id: string | null;
 };
 
-const CATEGORIAS = [
+const CATEGORIAS_FALLBACK = [
   { value: "sobrancelhas",     label: "Sobrancelhas" },
   { value: "micropigmentacao", label: "Micropigmentação" },
   { value: "depilacao",        label: "Depilação" },
@@ -169,6 +169,7 @@ function AgendarPage() {
 
   const [services, setServices] = useState<Service[]>([]);
   const [businessHours, setBusinessHours] = useState<BusinessHoursRow[]>([]);
+  const [categorias, setCategorias] = useState(CATEGORIAS_FALLBACK);
   const [initialLoading, setInitialLoading] = useState(true);
 
   const [name, setName] = useState("");
@@ -195,9 +196,11 @@ function AgendarPage() {
       const [
         { data: svcs, error: svcsErr },
         { data: bh,   error: bhErr },
+        { data: cats },
       ] = await Promise.all([
         supabase.from("services").select("id,name,duration_minutes,price,is_hof,category_group").eq("active", true).order("category_group").order("name"),
         supabase.from("business_hours").select("weekday,is_open,open_time,close_time,break_start,break_end"),
+        supabase.from("service_categories").select("value,label").order("sort_order").order("label"),
       ]);
 
       if (svcsErr) console.error("[agendar] services:", svcsErr.message);
@@ -205,6 +208,7 @@ function AgendarPage() {
 
       setServices((svcs as Service[]) ?? []);
       setBusinessHours((bh as BusinessHoursRow[]) ?? []);
+      if (cats && cats.length > 0) setCategorias(cats as { value: string; label: string }[]);
       setInitialLoading(false);
     })();
   }, []);
@@ -267,14 +271,14 @@ function AgendarPage() {
     return getSlotsForDisplay(date, totalDuration, dayAppts, services, bhForDay);
   }, [date, bhForDay, totalDuration, dayAppts, services]);
 
-  // Clear selected slot when duration changes and the slot is no longer valid
   useEffect(() => {
     if (time && isSlotPast(time, date, now)) setTime("");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceId, extraServices]);
 
   const today = format(new Date(), "yyyy-MM-dd");
 
-  const grupos = CATEGORIAS.map((cat) => ({
+  const grupos = categorias.map((cat) => ({
     ...cat,
     items: services.filter((s) => (s.category_group ?? "outros") === cat.value),
   })).filter((g) => g.items.length > 0);

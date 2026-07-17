@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, isSameMonth, isSameDay, addMonths, subMonths, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Plus, MessageCircle, Trash2, Pencil, Calendar as CalendarIcon, Phone, Zap, AlertTriangle, CheckCircle2, XCircle, Clock, List, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { Plus, MessageCircle, Trash2, Pencil, Calendar as CalendarIcon, Phone, Zap, AlertTriangle, CheckCircle2, XCircle, Clock, List, ChevronLeft, ChevronRight, ChevronDown, X } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,8 @@ export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard }
 
 type Service = { id: string; name: string; duration_minutes: number; price: number; is_hof: boolean; plano_contas_id: string | null; category_group: string | null };
 
+type ServiceCategory = { value: string; label: string; color_class: string | null };
+
 export type Appointment = {
   id: string;
   client_name: string;
@@ -35,7 +37,17 @@ export type Appointment = {
   notes: string | null;
   wants_to_anticipate: boolean;
   extra_charge: boolean;
+  deposit_amount: number;
 };
+
+const CATEGORIAS_FALLBACK: ServiceCategory[] = [
+  { value: "sobrancelhas",     label: "Sobrancelhas",     color_class: "bg-pink-100 text-pink-700 border-pink-200" },
+  { value: "micropigmentacao", label: "Micropigmentação", color_class: "bg-purple-100 text-purple-700 border-purple-200" },
+  { value: "depilacao",        label: "Depilação",        color_class: "bg-blue-100 text-blue-700 border-blue-200" },
+  { value: "facial",           label: "Tratamento Facial",color_class: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  { value: "hof",              label: "HOF (Alto Valor)", color_class: "bg-amber-100 text-amber-700 border-amber-200" },
+  { value: "outros",           label: "Outros",           color_class: "bg-muted text-muted-foreground" },
+];
 
 const statusStyle: Record<Appointment["status"], { cls: string; icon: typeof Clock; label: string }> = {
   agendado:            { cls: "bg-warning/15 text-warning border-warning/30",            icon: Clock,         label: "Aguardando" },
@@ -45,15 +57,6 @@ const statusStyle: Record<Appointment["status"], { cls: string; icon: typeof Clo
   falta:               { cls: "bg-orange-100 text-orange-700 border-orange-200",          icon: AlertTriangle, label: "Falta" },
   pendente_pagamento:  { cls: "bg-orange-100 text-orange-700 border-orange-200",          icon: Clock,         label: "Pend. Pagamento" },
 };
-
-const CATEGORIAS_MODAL = [
-  { value: "sobrancelhas",     label: "Sobrancelhas" },
-  { value: "micropigmentacao", label: "Micropigmentação" },
-  { value: "depilacao",        label: "Depilação" },
-  { value: "facial",           label: "Tratamento Facial" },
-  { value: "hof",              label: "HOF (Alto Valor)" },
-  { value: "outros",           label: "Outros" },
-] as const;
 
 function generateAllSlots(): string[] {
   const slots: string[] = [];
@@ -74,7 +77,7 @@ function getAvailableSlots(
 ): string[] {
   const allSlots = bh ? generateSlotsForDay(bh, newDuration) : generateAllSlots();
   const busyIntervals = existingAppts
-    .filter((a: any) => a.id !== editingId)
+    .filter((a) => (a as { id?: string }).id !== editingId)
     .map((a) => {
       const start = new Date(a.scheduled_at).getTime();
       const svc = services.find((s) => s.id === a.service_id);
@@ -123,6 +126,7 @@ function Dashboard() {
   const { user } = useAuth();
   const [appts, setAppts] = useState<Appointment[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [businessHours, setBusinessHours] = useState<BusinessHoursRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -150,15 +154,32 @@ function Dashboard() {
 
   const load = async () => {
     setLoading(true);
-    const [{ data: a }, { data: s }, { data: bh }] = await Promise.all([
-      supabase.from("appointments").select("*").order("scheduled_at", { ascending: true }),
-      supabase.from("services").select("*").eq("active", true).order("name"),
-      supabase.from("business_hours").select("weekday,is_open,open_time,close_time,break_start,break_end"),
-    ]);
-    setAppts((a as Appointment[]) ?? []);
-    setServices((s as Service[]) ?? []);
-    setBusinessHours((bh as BusinessHoursRow[]) ?? []);
-    setLoading(false);
+    try {
+      const [apptRes, svcRes, bhRes, catRes] = await Promise.all([
+        supabase.from("appointments").select("*").order("scheduled_at", { ascending: true }),
+        supabase.from("services").select("*").eq("active", true).order("name"),
+        supabase.from("business_hours").select("weekday,is_open,open_time,close_time,break_start,break_end"),
+        supabase.from("service_categories").select("value,label,color_class").order("sort_order").order("label"),
+      ]);
+      if (apptRes.error) console.error("[dashboard] load appointments:", apptRes.error.message);
+      if (svcRes.error) console.error("[dashboard] load services:", svcRes.error.message);
+      if (bhRes.error) console.error("[dashboard] load business_hours:", bhRes.error.message);
+      if (catRes.error) console.error("[dashboard] load categories:", catRes.error.message);
+      setAppts((apptRes.data as Appointment[]) ?? []);
+      setServices((svcRes.data as Service[]) ?? []);
+      setBusinessHours((bhRes.data as BusinessHoursRow[]) ?? []);
+      const dbCats = (catRes.data as ServiceCategory[] | null) ?? [];
+      const dbValues = new Set(dbCats.map((c) => c.value));
+      setCategories(
+        dbCats.length > 0
+          ? [...dbCats, ...CATEGORIAS_FALLBACK.filter((fb) => !dbValues.has(fb.value))]
+          : CATEGORIAS_FALLBACK,
+      );
+    } catch (err) {
+      console.error("[dashboard] load unexpected:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { if (user) load(); }, [user]);
@@ -193,7 +214,6 @@ function Dashboard() {
     const { error } = await supabase.from("appointments").update({ status }).eq("id", a.id);
     if (error) return toast.error(error.message);
 
-    // Ao confirmar, cria o paciente automaticamente se ainda não existir
     if (status === "confirmado") {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const db = supabase as any;
@@ -244,6 +264,7 @@ function Dashboard() {
           </DialogTrigger>
           <AppointmentDialog
             services={services}
+            categories={categories}
             allAppts={appts}
             editing={editing}
             businessHours={businessHours}
@@ -360,6 +381,11 @@ function Dashboard() {
                             {a.wants_to_anticipate && (
                               <Badge variant="outline" className="border-primary/30 text-primary">
                                 <Zap className="mr-1 h-3 w-3" /> Aceita antecipar
+                              </Badge>
+                            )}
+                            {a.deposit_amount > 0 && (
+                              <Badge variant="outline" className="border-amber-200 text-amber-700 bg-amber-50">
+                                Sinal: R$ {Number(a.deposit_amount).toFixed(2)}
                               </Badge>
                             )}
                           </div>
@@ -774,17 +800,19 @@ function AnticipateDialog({ appts, canceled, onClose }: { appts: Appointment[]; 
 
 function ServicoSelect({
   services,
+  categories,
   value,
   onChange,
 }: {
   services: Service[];
+  categories: ServiceCategory[];
   value: string;
   onChange: (id: string) => void;
 }) {
   const [aberto, setAberto] = useState(false);
   const [expandidos, setExpandidos] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
-    CATEGORIAS_MODAL.forEach((c) => { init[c.value] = true; });
+    categories.forEach((c) => { init[c.value] = true; });
     return init;
   });
   const ref = useRef<HTMLDivElement>(null);
@@ -797,7 +825,16 @@ function ServicoSelect({
     return () => document.removeEventListener("mousedown", fechar);
   }, []);
 
-  const grupos = CATEGORIAS_MODAL.map((cat) => ({
+  // Sync expanded state when categories change
+  useEffect(() => {
+    setExpandidos((prev) => {
+      const next = { ...prev };
+      categories.forEach((c) => { if (!(c.value in next)) next[c.value] = true; });
+      return next;
+    });
+  }, [categories]);
+
+  const grupos = categories.map((cat) => ({
     ...cat,
     services: services.filter((s) => (s.category_group ?? "outros") === cat.value),
   })).filter((g) => g.services.length > 0);
@@ -877,8 +914,9 @@ function ServicoSelect({
   );
 }
 
-function AppointmentDialog({ services, allAppts, editing, businessHours, onClose, onSaved }: {
+function AppointmentDialog({ services, categories, allAppts, editing, businessHours, onClose, onSaved }: {
   services: Service[];
+  categories: ServiceCategory[];
   allAppts: Appointment[];
   editing: Appointment | null;
   businessHours: BusinessHoursRow[];
@@ -889,6 +927,8 @@ function AppointmentDialog({ services, allAppts, editing, businessHours, onClose
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [serviceId, setServiceId] = useState<string>("none");
+  const [extraServices, setExtraServices] = useState<string[]>([]);
+  const [deposit, setDeposit] = useState("");
   const [type, setType] = useState<Appointment["type"]>("procedimento");
   const [date, setDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [time, setTime] = useState("");
@@ -909,21 +949,65 @@ function AppointmentDialog({ services, allAppts, editing, businessHours, onClose
     return isBefore(new Date(`${date}T${slot}`), now);
   };
 
+  // Multi-service helpers
+  const addExtraService = () => setExtraServices((prev) => [...prev, "none"]);
+  const removeExtraService = (idx: number) => {
+    setExtraServices((prev) => prev.filter((_, i) => i !== idx));
+    setTime("");
+  };
+  const updateExtraService = (idx: number, id: string) => {
+    setExtraServices((prev) => prev.map((s, i) => (i === idx ? id : s)));
+    setTime("");
+  };
+
+  const allSelectedServices = useMemo(() => {
+    const ids = [serviceId, ...extraServices].filter((id) => id !== "none");
+    return ids.map((id) => services.find((s) => s.id === id)).filter(Boolean) as Service[];
+  }, [serviceId, extraServices, services]);
+
+  const totalDuration = useMemo(
+    () => allSelectedServices.reduce((sum, s) => sum + s.duration_minutes, 0) || 30,
+    [allSelectedServices],
+  );
+
+  const totalPrice = useMemo(
+    () => allSelectedServices.reduce((sum, s) => sum + Number(s.price), 0),
+    [allSelectedServices],
+  );
+
   useEffect(() => {
     if (editing) {
       const d = new Date(editing.scheduled_at);
       setName(editing.client_name);
       setPhone(editing.phone);
-      setServiceId(editing.service_id ?? "none");
       setType(editing.type);
       setDate(format(d, "yyyy-MM-dd"));
       setTime(format(d, "HH:mm"));
       setNotes(editing.notes ?? "");
       setAnticipate(editing.wants_to_anticipate);
+      setDeposit(editing.deposit_amount > 0 ? String(editing.deposit_amount) : "");
+      // Load appointment_services for this appointment
+      supabase
+        .from("appointment_services")
+        .select("service_id")
+        .eq("appointment_id", editing.id)
+        .order("created_at")
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            const ids = data.map((r) => r.service_id).filter(Boolean) as string[];
+            setServiceId(ids[0] ?? editing.service_id ?? "none");
+            setExtraServices(ids.slice(1));
+          } else {
+            setServiceId(editing.service_id ?? "none");
+            setExtraServices([]);
+          }
+        });
     } else {
       setName("");
       setPhone("");
       setServiceId("none");
+      setExtraServices([]);
+      setDeposit("");
       setType("procedimento");
       setDate(format(new Date(), "yyyy-MM-dd"));
       setTime("");
@@ -938,25 +1022,26 @@ function AppointmentDialog({ services, allAppts, editing, businessHours, onClose
   }, [date, businessHours]);
 
   const availableSlots = useMemo(() => {
-    const selectedService = services.find((s) => s.id === serviceId);
-    const duration = selectedService?.duration_minutes ?? 30;
     const dayAppts = allAppts.filter((a) => {
       const d = a.scheduled_at.slice(0, 10);
       return d === date && a.status !== "cancelado" && a.status !== "falta";
     });
-    return getAvailableSlots(date, duration, dayAppts, services, editing?.id, bhForDay);
-  }, [date, serviceId, allAppts, services, editing, bhForDay]);
+    return getAvailableSlots(date, totalDuration, dayAppts, services, editing?.id, bhForDay);
+  }, [date, totalDuration, allAppts, services, editing, bhForDay]);
 
   useEffect(() => {
     if (time && availableSlots.length > 0 && !availableSlots.includes(time)) {
       setTime("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [availableSlots]);
 
   const resetForm = () => {
     setName("");
     setPhone("");
     setServiceId("none");
+    setExtraServices([]);
+    setDeposit("");
     setType("procedimento");
     setDate(format(new Date(), "yyyy-MM-dd"));
     setTime("");
@@ -973,24 +1058,61 @@ function AppointmentDialog({ services, allAppts, editing, businessHours, onClose
     }
     setSaving(true);
     const scheduled_at = new Date(`${date}T${time}`).toISOString();
-    const service = services.find((s) => s.id === serviceId);
+    const primaryService = services.find((s) => s.id === serviceId);
+    const serviceName = allSelectedServices.length > 0
+      ? allSelectedServices.map((s) => s.name).join(" + ")
+      : primaryService?.name ?? null;
+
     const payload = {
       user_id: user.id,
       client_name: name,
       phone,
       service_id: serviceId === "none" ? null : serviceId,
-      service_name: service?.name ?? null,
+      service_name: serviceName,
       type,
       scheduled_at,
       notes: notes || null,
       wants_to_anticipate: anticipate,
       extra_charge: false,
+      deposit_amount: Number(deposit) || 0,
     };
-    const { error } = editing
-      ? await supabase.from("appointments").update(payload).eq("id", editing.id)
-      : await supabase.from("appointments").insert(payload);
+
+    let appointmentId: string;
+
+    if (editing) {
+      const { error } = await supabase.from("appointments").update(payload).eq("id", editing.id);
+      if (error) { toast.error(error.message); setSaving(false); return; }
+      appointmentId = editing.id;
+
+      // Delete existing appointment_services before reinserting
+      await supabase.from("appointment_services").delete().eq("appointment_id", editing.id);
+    } else {
+      const { data: inserted, error } = await supabase
+        .from("appointments")
+        .insert(payload)
+        .select("id")
+        .single();
+      if (error || !inserted) { toast.error(error?.message ?? "Erro ao criar agendamento"); setSaving(false); return; }
+      appointmentId = inserted.id;
+    }
+
+    // Insert appointment_services rows
+    if (allSelectedServices.length > 0) {
+      const { error: svcErr } = await supabase.from("appointment_services").insert(
+        allSelectedServices.map((svc) => ({
+          appointment_id: appointmentId,
+          service_id: svc.id,
+          service_name: svc.name,
+          price: svc.price,
+          cost: 0,
+          duration_minutes: svc.duration_minutes,
+          is_hof: svc.is_hof,
+        })),
+      );
+      if (svcErr) console.error("[dashboard] appointment_services:", svcErr.message);
+    }
+
     setSaving(false);
-    if (error) return toast.error(error.message);
     toast.success(editing ? "Agendamento atualizado" : "Agendamento criado");
     resetForm();
     onSaved();
@@ -1035,10 +1157,90 @@ function AppointmentDialog({ services, allAppts, editing, businessHours, onClose
             </Select>
           </div>
         </div>
+
+        {/* Serviços */}
         <div className="space-y-1.5">
           <Label>Serviço</Label>
-          <ServicoSelect services={services} value={serviceId} onChange={setServiceId} />
+          <div className="space-y-2">
+            <ServicoSelect
+              services={services}
+              categories={categories}
+              value={serviceId}
+              onChange={(id) => { setServiceId(id); setTime(""); }}
+            />
+
+            {extraServices.map((eid, idx) => (
+              <div key={idx} className="flex gap-2">
+                <div className="flex-1">
+                  <ServicoSelect
+                    services={services}
+                    categories={categories}
+                    value={eid}
+                    onChange={(id) => updateExtraService(idx, id)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeExtraService(idx)}
+                  className="flex h-[38px] w-9 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive"
+                  aria-label="Remover serviço"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
+
+            {serviceId !== "none" && (
+              <button
+                type="button"
+                onClick={addExtraService}
+                className="flex items-center gap-1.5 text-xs font-medium text-[#B5936E] transition-colors hover:text-[#83715D]"
+              >
+                <Plus size={13} /> Adicionar serviço
+              </button>
+            )}
+
+            {allSelectedServices.length > 1 && (
+              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <Clock size={11} /> {totalDuration}min no total
+                </span>
+                {totalPrice > 0 && (
+                  <span className="font-semibold text-foreground">R$ {totalPrice.toFixed(2)}</span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Sinal */}
+        <div className="space-y-1.5">
+          <Label>Sinal</Label>
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0,00"
+                value={deposit}
+                onChange={(e) => setDeposit(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 text-xs"
+              onClick={() => setDeposit("50")}
+            >
+              Usar R$ 50,00
+            </Button>
+          </div>
+        </div>
+
         <div className="space-y-1.5">
           <Label>
             Horário disponível
@@ -1229,6 +1431,9 @@ function CalendarView({ appts, services, onEdit }: {
                       </span>
                     )}
                     <span>{a.phone}</span>
+                    {a.deposit_amount > 0 && (
+                      <span className="text-amber-600 font-medium">Sinal: R$ {Number(a.deposit_amount).toFixed(2)}</span>
+                    )}
                   </div>
                 </button>
               );

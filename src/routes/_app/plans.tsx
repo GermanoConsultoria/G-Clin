@@ -1,3 +1,16 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+
+export const Route = createFileRoute("/_app/plans")({ component: PlansDisabled });
+
+function PlansDisabled() {
+  const navigate = useNavigate();
+  useEffect(() => { navigate({ to: "/overview" }); }, [navigate]);
+  return null;
+}
+
+/* MÓDULO DESATIVADO TEMPORARIAMENTE A PEDIDO DO CLIENTE (ver conversa de 16/07/2026) — código preservado para reativação futura.
+
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Plus, Trash2, Tag } from "lucide-react";
@@ -7,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 
-export const Route = createFileRoute("/_app/plans")({ component: Plans });
+// export const Route = createFileRoute("/_app/plans")({ component: Plans });
 
 type Plan = { id: string; name: string };
 
@@ -82,3 +95,5 @@ function Plans() {
     </div>
   );
 }
+
+*/

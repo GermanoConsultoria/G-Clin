@@ -19,7 +19,7 @@ const mainNavItems = [
   { to: "/slots",     label: "Horários livres", icon: Search },
   { to: "/hours",     label: "Funcionamento",   icon: Clock },
   { to: "/services",  label: "Serviços",        icon: Briefcase },
-  { to: "/pacientes", label: "Pacientes",       icon: UserSquare2 },
+  // { to: "/pacientes", label: "Pacientes", icon: UserSquare2 }, // DESATIVADO — ver nota TAREFA 4
 ] as const;
 
 const financeItems = [
@@ -31,9 +31,9 @@ const financeItems = [
 ] as const;
 
 const configItems = [
-  { to: "/config/usuarios", label: "Usuários",   icon: Users },
-  { to: "/plans",           label: "Convênios",  icon: Tag },
-  { to: "/categories",      label: "Categorias", icon: FolderHeart },
+  { to: "/config/usuarios", label: "Usuários", icon: Users },
+  // { to: "/plans",           label: "Convênios",  icon: Tag },        // DESATIVADO — ver nota TAREFA 4
+  // { to: "/categories",      label: "Categorias", icon: FolderHeart }, // DESATIVADO — ver nota TAREFA 4
 ] as const;
 
 function NavItem({ 

@@ -28,16 +28,22 @@ type Service = {
   plano_contas_id: string | null;
 };
 
-const CATEGORIAS = [
-  { value: "sobrancelhas",     label: "Sobrancelhas" },
-  { value: "micropigmentacao", label: "Micropigmentação" },
-  { value: "depilacao",        label: "Depilação" },
-  { value: "facial",           label: "Tratamento Facial" },
-  { value: "hof",              label: "HOF (Alto Valor)" },
-  { value: "outros",           label: "Outros" },
-];
+type ServiceCategory = {
+  id: string;
+  value: string;
+  label: string;
+  color_class: string | null;
+  sort_order: number;
+};
 
-const CATEGORIA_LABEL: Record<string, string> = Object.fromEntries(CATEGORIAS.map((c) => [c.value, c.label]));
+const CATEGORIAS_FALLBACK: ServiceCategory[] = [
+  { id: "fb-1", value: "sobrancelhas",     label: "Sobrancelhas",      color_class: "bg-pink-100 text-pink-700 border-pink-200",        sort_order: 1 },
+  { id: "fb-2", value: "micropigmentacao", label: "Micropigmentação",  color_class: "bg-purple-100 text-purple-700 border-purple-200",  sort_order: 2 },
+  { id: "fb-3", value: "depilacao",        label: "Depilação",         color_class: "bg-blue-100 text-blue-700 border-blue-200",        sort_order: 3 },
+  { id: "fb-4", value: "facial",           label: "Tratamento Facial", color_class: "bg-emerald-100 text-emerald-700 border-emerald-200",sort_order: 4 },
+  { id: "fb-5", value: "hof",              label: "HOF (Alto Valor)",  color_class: "bg-amber-100 text-amber-700 border-amber-200",     sort_order: 5 },
+  { id: "fb-6", value: "outros",           label: "Outros",            color_class: "bg-muted text-muted-foreground",                   sort_order: 6 },
+];
 
 // Mapeamento category_group → nome no plano_contas (igual ao da migration)
 const CATEGORIA_PLANO_NOME: Record<string, string> = {
@@ -48,14 +54,25 @@ const CATEGORIA_PLANO_NOME: Record<string, string> = {
   hof:              "HOF",
 };
 
-const CATEGORIA_COR: Record<string, string> = {
-  sobrancelhas:     "bg-pink-100 text-pink-700 border-pink-200",
-  micropigmentacao: "bg-purple-100 text-purple-700 border-purple-200",
-  depilacao:        "bg-blue-100 text-blue-700 border-blue-200",
-  facial:           "bg-emerald-100 text-emerald-700 border-emerald-200",
-  hof:              "bg-amber-100 text-amber-700 border-amber-200",
-  outros:           "bg-muted text-muted-foreground",
-};
+const COR_OPTIONS = [
+  { label: "Rosa",   value: "bg-pink-100 text-pink-700 border-pink-200" },
+  { label: "Roxo",   value: "bg-purple-100 text-purple-700 border-purple-200" },
+  { label: "Azul",   value: "bg-blue-100 text-blue-700 border-blue-200" },
+  { label: "Verde",  value: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  { label: "Âmbar",  value: "bg-amber-100 text-amber-700 border-amber-200" },
+  { label: "Neutro", value: "bg-muted text-muted-foreground" },
+  { label: "Índigo", value: "bg-indigo-100 text-indigo-700 border-indigo-200" },
+  { label: "Ciano",  value: "bg-cyan-100 text-cyan-700 border-cyan-200" },
+];
+
+function slugify(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 const empty = {
   name: "", description: "", price: "0", cost: "0",
@@ -66,25 +83,51 @@ const empty = {
 function Services() {
   const { user } = useAuth();
   const [items, setItems] = useState<Service[]>([]);
+  const [categories, setCategories] = useState<ServiceCategory[]>([]);
   const [planoContas, setPlanoContas] = useState<PlanoContas[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
+  const [openNewCat, setOpenNewCat] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(empty);
   const [filtro, setFiltro] = useState<"todos" | "fixo" | "hof">("todos");
 
+  // New category form
+  const [catLabel, setCatLabel] = useState("");
+  const [catCor, setCatCor] = useState(COR_OPTIONS[0].value);
+  const [savingCat, setSavingCat] = useState(false);
+
   const load = async () => {
     setLoading(true);
-    const [{ data: s }, { data: pc }] = await Promise.all([
-      supabase.from("services").select("*").order("category_group").order("name"),
-      supabase.from("plano_contas").select("*").eq("tipo", "RECEITA").eq("ativo", true).order("nome"),
-    ]);
-    setItems((s as Service[]) ?? []);
-    setPlanoContas(pc ?? []);
-    setLoading(false);
+    try {
+      const [svcRes, pcRes, catRes] = await Promise.all([
+        supabase.from("services").select("*").order("category_group").order("name"),
+        supabase.from("plano_contas").select("*").eq("tipo", "RECEITA").eq("ativo", true).order("nome"),
+        supabase.from("service_categories").select("id,value,label,color_class,sort_order").order("sort_order").order("label"),
+      ]);
+      if (svcRes.error) console.error("[services] load services:", svcRes.error.message);
+      if (pcRes.error) console.error("[services] load plano_contas:", pcRes.error.message);
+      if (catRes.error) console.error("[services] load categories:", catRes.error.message);
+      setItems((svcRes.data as Service[]) ?? []);
+      setPlanoContas(pcRes.data ?? []);
+      const dbCats = (catRes.data as ServiceCategory[] | null) ?? [];
+      const dbValues = new Set(dbCats.map((c) => c.value));
+      setCategories(
+        dbCats.length > 0
+          ? [...dbCats, ...CATEGORIAS_FALLBACK.filter((fb) => !dbValues.has(fb.value))]
+          : CATEGORIAS_FALLBACK,
+      );
+    } catch (err) {
+      console.error("[services] load unexpected:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { if (user) load(); }, [user]);
+
+  const CATEGORIA_LABEL = Object.fromEntries(categories.map((c) => [c.value, c.label]));
+  const CATEGORIA_COR = Object.fromEntries(categories.map((c) => [c.value, c.color_class ?? "bg-muted text-muted-foreground"]));
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,6 +150,33 @@ function Services() {
     if (error) return toast.error(error.message);
     toast.success(editingId ? "Serviço atualizado" : "Serviço cadastrado");
     setOpen(false); setForm(empty); setEditingId(null); load();
+  };
+
+  const saveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !catLabel.trim()) return;
+    setSavingCat(true);
+
+    const value = slugify(catLabel);
+    if (!value) { toast.error("Nome inválido para categoria"); setSavingCat(false); return; }
+
+    // Get max sort_order
+    const maxOrder = categories.reduce((m, c) => Math.max(m, c.sort_order), 0);
+
+    const { error } = await supabase.from("service_categories").insert({
+      user_id: user.id,
+      value,
+      label: catLabel.trim(),
+      color_class: catCor,
+      sort_order: maxOrder + 1,
+    });
+
+    setSavingCat(false);
+    if (error) return toast.error(error.message);
+    toast.success("Categoria criada!");
+    setCatLabel(""); setCatCor(COR_OPTIONS[0].value);
+    setOpenNewCat(false);
+    load();
   };
 
   const edit = (s: Service) => {
@@ -146,8 +216,7 @@ function Services() {
     return true;
   });
 
-  // Agrupar por categoria
-  const grupos = CATEGORIAS.map((cat) => ({
+  const grupos = categories.map((cat) => ({
     ...cat,
     services: filtered.filter((s) => (s.category_group ?? "outros") === cat.value),
   })).filter((g) => g.services.length > 0);
@@ -164,71 +233,112 @@ function Services() {
             {totalFixo} serviços com valor fixo · {totalHof} procedimentos HOF
           </p>
         </div>
-        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setForm(empty); setEditingId(null); } }}>
-          <DialogTrigger asChild>
-            <Button className="bg-[image:var(--gradient-hero)]">
-              <Plus className="h-4 w-4" /> Novo serviço
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader><DialogTitle>{editingId ? "Editar" : "Novo"} serviço</DialogTitle></DialogHeader>
-            <form onSubmit={save} className="space-y-3">
-              <div><Label>Nome</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-              <div><Label>Descrição</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></div>
-              <div>
-                <Label>Categoria</Label>
-                <Select value={form.category_group} onValueChange={(v) => {
-                  const nomePlano = CATEGORIA_PLANO_NOME[v];
-                  const pcId = nomePlano
-                    ? (planoContas.find((pc) => pc.nome === nomePlano)?.id ?? form.plano_contas_id)
-                    : form.plano_contas_id;
-                  setForm({ ...form, category_group: v, is_hof: v === "hof", plano_contas_id: pcId || "" });
-                }}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIAS.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
+        <div className="flex items-center gap-2">
+          {/* Botão Nova Categoria */}
+          <Dialog open={openNewCat} onOpenChange={(o) => { setOpenNewCat(o); if (!o) { setCatLabel(""); setCatCor(COR_OPTIONS[0].value); } }}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Plus className="h-4 w-4" /> Nova categoria
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm">
+              <DialogHeader><DialogTitle>Nova categoria de serviço</DialogTitle></DialogHeader>
+              <form onSubmit={saveCategory} className="space-y-4">
                 <div>
-                  <Label>Preço (R$)</Label>
-                  <Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
-                  {form.is_hof && <p className="mt-1 text-xs text-amber-600">HOF: deixe 0 se sob avaliação</p>}
+                  <Label>Nome da categoria</Label>
+                  <Input required value={catLabel} onChange={(e) => setCatLabel(e.target.value)} placeholder="Ex: Limpeza de Pele" />
                 </div>
-                <div><Label>Custo (R$)</Label><Input type="number" step="0.01" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} /></div>
-                <div><Label>Duração (min)</Label><Input type="number" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })} /></div>
-              </div>
-              <div>
-                <Label>Categoria financeira (Plano de contas)</Label>
-                <Select
-                  value={form.plano_contas_id || "none"}
-                  onValueChange={(v) => setForm({ ...form, plano_contas_id: v === "none" ? "" : v })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhuma (usar padrão)</SelectItem>
-                    {planoContas.map((pc) => (
-                      <SelectItem key={pc.id} value={pc.id}>{pc.nome}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="mt-1 text-xs text-muted-foreground">Usada ao lançar automaticamente no financeiro ao concluir atendimentos.</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
-                  <Label>Ativo</Label>
+                <div>
+                  <Label>Cor do badge</Label>
+                  <Select value={catCor} onValueChange={setCatCor}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COR_OPTIONS.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${c.value}`}>
+                            {c.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch checked={form.is_hof} onCheckedChange={(v) => setForm({ ...form, is_hof: v, category_group: v ? "hof" : form.category_group })} />
-                  <Label className="text-amber-700">HOF</Label>
+                <Button type="submit" disabled={savingCat} className="w-full bg-[image:var(--gradient-hero)]">
+                  {savingCat ? "Salvando..." : "Criar categoria"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+
+          {/* Botão Novo Serviço */}
+          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setForm(empty); setEditingId(null); } }}>
+            <DialogTrigger asChild>
+              <Button className="bg-[image:var(--gradient-hero)]">
+                <Plus className="h-4 w-4" /> Novo serviço
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader><DialogTitle>{editingId ? "Editar" : "Novo"} serviço</DialogTitle></DialogHeader>
+              <form onSubmit={save} className="space-y-3">
+                <div><Label>Nome</Label><Input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+                <div><Label>Descrição</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={2} /></div>
+                <div>
+                  <Label>Categoria</Label>
+                  <Select value={form.category_group} onValueChange={(v) => {
+                    const nomePlano = CATEGORIA_PLANO_NOME[v];
+                    const pcId = nomePlano
+                      ? (planoContas.find((pc) => pc.nome === nomePlano)?.id ?? form.plano_contas_id)
+                      : form.plano_contas_id;
+                    setForm({ ...form, category_group: v, is_hof: v === "hof", plano_contas_id: pcId || "" });
+                  }}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </div>
-              <Button type="submit" className="w-full bg-[image:var(--gradient-hero)]">Salvar</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label>Preço (R$)</Label>
+                    <Input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+                    {form.is_hof && <p className="mt-1 text-xs text-amber-600">HOF: deixe 0 se sob avaliação</p>}
+                  </div>
+                  <div><Label>Custo (R$)</Label><Input type="number" step="0.01" value={form.cost} onChange={(e) => setForm({ ...form, cost: e.target.value })} /></div>
+                  <div><Label>Duração (min)</Label><Input type="number" value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })} /></div>
+                </div>
+                <div>
+                  <Label>Categoria financeira (Plano de contas)</Label>
+                  <Select
+                    value={form.plano_contas_id || "none"}
+                    onValueChange={(v) => setForm({ ...form, plano_contas_id: v === "none" ? "" : v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhuma (usar padrão)</SelectItem>
+                      {planoContas.map((pc) => (
+                        <SelectItem key={pc.id} value={pc.id}>{pc.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1 text-xs text-muted-foreground">Usada ao lançar automaticamente no financeiro ao concluir atendimentos.</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Switch checked={form.active} onCheckedChange={(v) => setForm({ ...form, active: v })} />
+                    <Label>Ativo</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch checked={form.is_hof} onCheckedChange={(v) => setForm({ ...form, is_hof: v, category_group: v ? "hof" : form.category_group })} />
+                    <Label className="text-amber-700">HOF</Label>
+                  </div>
+                </div>
+                <Button type="submit" className="w-full bg-[image:var(--gradient-hero)]">Salvar</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Filtros */}
