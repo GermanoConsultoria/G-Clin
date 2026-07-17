@@ -41,14 +41,9 @@ export type Appointment = {
 };
 
 const CATEGORIAS_FALLBACK: ServiceCategory[] = [
-  { value: "sobrancelhas",     label: "Sobrancelhas",     color_class: "bg-pink-100 text-pink-700 border-pink-200" },
-  { value: "micropigmentacao", label: "Micropigmentação", color_class: "bg-purple-100 text-purple-700 border-purple-200" },
-  { value: "depilacao",        label: "Depilação",        color_class: "bg-blue-100 text-blue-700 border-blue-200" },
-  { value: "facial",           label: "Tratamento Facial",color_class: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  { value: "hof",              label: "HOF (Alto Valor)", color_class: "bg-amber-100 text-amber-700 border-amber-200" },
-  { value: "maquiagem",        label: "Maquiagem",        color_class: "bg-rose-100 text-rose-700 border-rose-200" },
-  { value: "penteado",         label: "Penteado",         color_class: "bg-violet-100 text-violet-700 border-violet-200" },
-  { value: "outros",           label: "Outros",           color_class: "bg-muted text-muted-foreground" },
+  { value: "maquiagem", label: "Maquiagem", color_class: "bg-rose-100 text-rose-700 border-rose-200" },
+  { value: "penteado",  label: "Penteados", color_class: "bg-violet-100 text-violet-700 border-violet-200" },
+  { value: "pacotes",   label: "Pacotes",   color_class: "bg-amber-100 text-amber-700 border-amber-200" },
 ];
 
 const statusStyle: Record<Appointment["status"], { cls: string; icon: typeof Clock; label: string }> = {
@@ -836,10 +831,15 @@ function ServicoSelect({
     });
   }, [categories]);
 
-  const grupos = categories.map((cat) => ({
+  const baseGruposSvc = categories.map((cat) => ({
     ...cat,
-    services: services.filter((s) => (s.category_group ?? "outros") === cat.value),
+    services: services.filter((s) => s.category_group === cat.value),
   })).filter((g) => g.services.length > 0);
+  const assignedSvcIds = new Set(baseGruposSvc.flatMap((g) => g.services.map((s) => s.id)));
+  const semCategoriaSvc = services.filter((s) => !assignedSvcIds.has(s.id));
+  const grupos = semCategoriaSvc.length > 0
+    ? [...baseGruposSvc, { value: "_sc", label: "Sem categoria", color_class: null as string | null, services: semCategoriaSvc }]
+    : baseGruposSvc;
 
   const svcSelecionado = value !== "none" ? services.find((s) => s.id === value) : null;
 

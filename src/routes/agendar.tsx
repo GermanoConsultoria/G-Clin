@@ -24,14 +24,9 @@ type DayAppt = {
 };
 
 const CATEGORIAS_FALLBACK = [
-  { value: "sobrancelhas",     label: "Sobrancelhas" },
-  { value: "micropigmentacao", label: "Micropigmentação" },
-  { value: "depilacao",        label: "Depilação" },
-  { value: "facial",           label: "Tratamento Facial" },
-  { value: "hof",              label: "HOF (Alto Valor)" },
-  { value: "maquiagem",        label: "Maquiagem" },
-  { value: "penteado",         label: "Penteado" },
-  { value: "outros",           label: "Outros" },
+  { value: "maquiagem", label: "Maquiagem" },
+  { value: "penteado",  label: "Penteados" },
+  { value: "pacotes",   label: "Pacotes" },
 ];
 
 const GOLD = "linear-gradient(135deg, #AC9D8A 0%, #B5936E 50%, #83715D 100%)";
@@ -280,10 +275,15 @@ function AgendarPage() {
 
   const today = format(new Date(), "yyyy-MM-dd");
 
-  const grupos = categorias.map((cat) => ({
+  const baseGrupos = categorias.map((cat) => ({
     ...cat,
-    items: services.filter((s) => (s.category_group ?? "outros") === cat.value),
+    items: services.filter((s) => s.category_group === cat.value),
   })).filter((g) => g.items.length > 0);
+  const assignedAgendar = new Set(baseGrupos.flatMap((g) => g.items.map((s) => s.id)));
+  const semCatAgendar = services.filter((s) => !assignedAgendar.has(s.id));
+  const grupos = semCatAgendar.length > 0
+    ? [...baseGrupos, { value: "_sc", label: "Outros serviços", items: semCatAgendar }]
+    : baseGrupos;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
