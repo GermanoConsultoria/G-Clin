@@ -29,6 +29,8 @@ const CATEGORIAS_FALLBACK = [
   { value: "depilacao",        label: "Depilação" },
   { value: "facial",           label: "Tratamento Facial" },
   { value: "hof",              label: "HOF (Alto Valor)" },
+  { value: "maquiagem",        label: "Maquiagem" },
+  { value: "penteado",         label: "Penteado" },
   { value: "outros",           label: "Outros" },
 ];
 

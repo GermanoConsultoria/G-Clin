@@ -37,12 +37,14 @@ type ServiceCategory = {
 };
 
 const CATEGORIAS_FALLBACK: ServiceCategory[] = [
-  { id: "fb-1", value: "sobrancelhas",     label: "Sobrancelhas",      color_class: "bg-pink-100 text-pink-700 border-pink-200",        sort_order: 1 },
-  { id: "fb-2", value: "micropigmentacao", label: "Micropigmentação",  color_class: "bg-purple-100 text-purple-700 border-purple-200",  sort_order: 2 },
-  { id: "fb-3", value: "depilacao",        label: "Depilação",         color_class: "bg-blue-100 text-blue-700 border-blue-200",        sort_order: 3 },
-  { id: "fb-4", value: "facial",           label: "Tratamento Facial", color_class: "bg-emerald-100 text-emerald-700 border-emerald-200",sort_order: 4 },
-  { id: "fb-5", value: "hof",              label: "HOF (Alto Valor)",  color_class: "bg-amber-100 text-amber-700 border-amber-200",     sort_order: 5 },
-  { id: "fb-6", value: "outros",           label: "Outros",            color_class: "bg-muted text-muted-foreground",                   sort_order: 6 },
+  { id: "fb-1", value: "sobrancelhas",     label: "Sobrancelhas",      color_class: "bg-pink-100 text-pink-700 border-pink-200",           sort_order: 1 },
+  { id: "fb-2", value: "micropigmentacao", label: "Micropigmentação",  color_class: "bg-purple-100 text-purple-700 border-purple-200",     sort_order: 2 },
+  { id: "fb-3", value: "depilacao",        label: "Depilação",         color_class: "bg-blue-100 text-blue-700 border-blue-200",           sort_order: 3 },
+  { id: "fb-4", value: "facial",           label: "Tratamento Facial", color_class: "bg-emerald-100 text-emerald-700 border-emerald-200",  sort_order: 4 },
+  { id: "fb-5", value: "hof",              label: "HOF (Alto Valor)",  color_class: "bg-amber-100 text-amber-700 border-amber-200",        sort_order: 5 },
+  { id: "fb-7", value: "maquiagem",        label: "Maquiagem",         color_class: "bg-rose-100 text-rose-700 border-rose-200",           sort_order: 7 },
+  { id: "fb-8", value: "penteado",         label: "Penteado",          color_class: "bg-violet-100 text-violet-700 border-violet-200",     sort_order: 8 },
+  { id: "fb-6", value: "outros",           label: "Outros",            color_class: "bg-muted text-muted-foreground",                      sort_order: 6 },
 ];
 
 // Mapeamento category_group → nome no plano_contas (igual ao da migration)
