@@ -144,10 +144,16 @@ function Dashboard() {
       const data = a.scheduled_at.slice(0, 10);
       if (filtroPeriodo === "hoje") return data === hoje;
       if (filtroPeriodo === "mes") return data >= inicioMes && data <= fimMes;
-      if (filtroPeriodo === "dia") return !filtroDataDia || data === filtroDataDia;
+      if (filtroPeriodo === "dia") return filtroDataDia ? data === filtroDataDia : true;
       return true;
     });
   }, [appts, filtroStatus, filtroPeriodo, filtroDataDia]);
+
+  // Calendário ignora filtro de período — aplica só filtro de status
+  const apptsParaCalendario = useMemo(
+    () => (filtroStatus === "TODOS" ? appts : appts.filter((a) => a.status === filtroStatus)),
+    [appts, filtroStatus],
+  );
 
   const load = async () => {
     setLoading(true);
@@ -281,7 +287,12 @@ function Dashboard() {
             <button
               key={opt.value}
               type="button"
-              onClick={() => setFiltroPeriodo(opt.value)}
+              onClick={() => {
+                setFiltroPeriodo(opt.value);
+                if (opt.value === "dia" && !filtroDataDia) {
+                  setFiltroDataDia(format(new Date(), "yyyy-MM-dd"));
+                }
+              }}
               className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
                 filtroPeriodo === opt.value
                   ? "bg-background text-foreground shadow-sm"
@@ -432,7 +443,7 @@ function Dashboard() {
           </TabsContent>
 
           <TabsContent value="calendar" className="mt-4">
-            <CalendarView appts={apptsFiltrados} services={services} onEdit={(a) => { setEditing(a); setOpen(true); }} />
+            <CalendarView appts={apptsParaCalendario} services={services} onEdit={(a) => { setEditing(a); setOpen(true); }} />
           </TabsContent>
         </Tabs>
       )}

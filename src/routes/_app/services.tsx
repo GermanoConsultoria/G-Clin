@@ -42,13 +42,15 @@ const CATEGORIAS_FALLBACK: ServiceCategory[] = [
   { id: "fb-3", value: "pacotes",   label: "Pacotes",   color_class: "bg-amber-100 text-amber-700 border-amber-200",    sort_order: 3 },
 ];
 
-// Mapeamento category_group → nome no plano_contas (igual ao da migration)
 const CATEGORIA_PLANO_NOME: Record<string, string> = {
   sobrancelhas:     "Sobrancelhas",
   micropigmentacao: "Micropigmentação",
   depilacao:        "Depilação",
   facial:           "Tratamento Facial",
   hof:              "HOF",
+  maquiagem:        "Maquiagem",
+  penteado:         "Penteados",
+  pacotes:          "Pacotes",
 };
 
 const COR_OPTIONS = [

@@ -191,8 +191,8 @@ export default function LancamentosView({ lancamentos: inicial, planoContas, tip
     );
   }, [lancamentos, busca]);
 
-  const totalPendente = lancamentos.filter((l) => l.status === "PENDENTE").reduce((s, l) => s + Number(l.valor), 0);
-  const totalPago = lancamentos.filter((l) => l.status === "PAGO").reduce((s, l) => s + Number(l.valor), 0);
+  const totalPendente = lancamentosFiltrados.filter((l) => l.status === "PENDENTE").reduce((s, l) => s + Number(l.valor), 0);
+  const totalPago = lancamentosFiltrados.filter((l) => l.status === "PAGO").reduce((s, l) => s + Number(l.valor), 0);
 
   const hoje = new Date().toISOString().split("T")[0];
   function isVencido(l: LancamentoComRelacoes) {
