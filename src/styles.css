@@ -84,7 +84,10 @@
 
   /* Decorativo */
   --gold-mid:            #B5936E;
-  --shadow-card:   0 1px 4px rgba(0,0,0,0.07);
+  --shadow-card:         0 1px 4px rgba(0,0,0,0.07);
+  --shadow-soft:         0 4px 24px rgba(131,113,93,0.22);
+  --gradient-hero:       linear-gradient(135deg, #83715D 0%, #B5936E 100%);
+  --gradient-card:       linear-gradient(145deg, #FFFFFF 0%, #F8F0ED 100%);
 }
 
 @layer base {
