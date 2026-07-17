@@ -329,6 +329,7 @@ export type Database = {
           forma_pagamento: string | null
           grupo_parcela_id: string | null
           id: string
+          is_sinal: boolean
           lancamento_pai_id: string | null
           numero_documento: string | null
           numero_parcelas: number | null
@@ -351,6 +352,7 @@ export type Database = {
           forma_pagamento?: string | null
           grupo_parcela_id?: string | null
           id?: string
+          is_sinal?: boolean
           lancamento_pai_id?: string | null
           numero_documento?: string | null
           numero_parcelas?: number | null
@@ -373,6 +375,7 @@ export type Database = {
           forma_pagamento?: string | null
           grupo_parcela_id?: string | null
           id?: string
+          is_sinal?: boolean
           lancamento_pai_id?: string | null
           numero_documento?: string | null
           numero_parcelas?: number | null

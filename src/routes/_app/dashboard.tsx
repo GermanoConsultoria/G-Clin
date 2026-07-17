@@ -500,7 +500,8 @@ async function verificarDuplicata(appointmentId: string): Promise<boolean> {
   const { count } = await supabase
     .from("lancamento_financeiro")
     .select("*", { count: "exact", head: true })
-    .eq("appointment_id", appointmentId);
+    .eq("appointment_id", appointmentId)
+    .eq("is_sinal", false);
   return (count ?? 0) > 0;
 }
 
@@ -521,7 +522,10 @@ function ConcludeDialog({ appt, services, onClose, onSaved }: {
   useEffect(() => {
     if (appt) {
       const found = services.find((s) => s.id === appt.service_id);
-      setValor(found ? String(found.price) : "0");
+      const precoServico = found ? Number(found.price) : 0;
+      const sinalPago = Number(appt.deposit_amount) || 0;
+      const restante = Math.max(0, precoServico - sinalPago);
+      setValor(String(restante > 0 ? restante : precoServico));
       setFormaPagamento("DINHEIRO");
     }
   }, [appt, services]);
@@ -602,7 +606,19 @@ function ConcludeDialog({ appt, services, onClose, onSaved }: {
             <div className="space-y-1.5">
               <Label>{isHof ? "Valor cobrado (R$)" : "Confirmar valor (R$)"}</Label>
               <Input type="number" step="0.01" min="0" value={valor} onChange={(e) => setValor(e.target.value)} />
-              {!isHof && <p className="text-xs text-muted-foreground">Valor do serviço pré-preenchido. Ajuste se necessário.</p>}
+              {appt && Number(appt.deposit_amount) > 0 && (() => {
+                const precoServico = svc ? Number(svc.price) : 0;
+                const sinalPago = Number(appt.deposit_amount);
+                const restante = Math.max(0, precoServico - sinalPago);
+                return (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                    <span className="font-medium">{appt.service_name ?? "Serviço"}</span>{" "}
+                    R$ {precoServico.toFixed(2)} − R$ {sinalPago.toFixed(2)} de sinal ={" "}
+                    <span className="font-bold">R$ {restante.toFixed(2)} a receber</span>
+                  </div>
+                );
+              })()}
+              {!isHof && !Number(appt?.deposit_amount) && <p className="text-xs text-muted-foreground">Valor do serviço pré-preenchido. Ajuste se necessário.</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Forma de pagamento</Label>
@@ -644,7 +660,10 @@ function PendentePagamentoDialog({ appt, services, onClose, onSaved }: {
   useEffect(() => {
     if (appt) {
       const found = services.find((s) => s.id === appt.service_id);
-      setValor(found ? String(found.price) : "0");
+      const precoServico = found ? Number(found.price) : 0;
+      const sinalPago = Number(appt.deposit_amount) || 0;
+      const restante = Math.max(0, precoServico - sinalPago);
+      setValor(String(restante > 0 ? restante : precoServico));
     }
   }, [appt, services]);
 
@@ -1123,6 +1142,50 @@ function AppointmentDialog({ services, categories, allAppts, editing, businessHo
         })),
       );
       if (svcErr) console.error("[dashboard] appointment_services:", svcErr.message);
+    }
+
+    // Lançamento de sinal — criado imediatamente no financeiro independente do status
+    const depositNum = Number(deposit) || 0;
+    if (depositNum > 0) {
+      const planoContasId = await resolverPlanoContas(primaryService, user.id);
+      if (planoContasId) {
+        const dtVencimento = new Date(`${date}T${time}`).toISOString().split("T")[0];
+        const { data: sinalExistente } = await supabase
+          .from("lancamento_financeiro")
+          .select("id")
+          .eq("appointment_id", appointmentId)
+          .eq("is_sinal", true)
+          .maybeSingle();
+
+        if (sinalExistente) {
+          await supabase
+            .from("lancamento_financeiro")
+            .update({ valor: depositNum, dt_vencimento: `${dtVencimento}T00:00:00.000Z` })
+            .eq("id", sinalExistente.id);
+        } else {
+          await supabase.from("lancamento_financeiro").insert({
+            tipo: "RECEITA",
+            descricao: `Sinal — ${serviceName ?? "Procedimento"}`,
+            beneficiario: name,
+            valor: depositNum,
+            dt_vencimento: `${dtVencimento}T00:00:00.000Z`,
+            status: "PAGO",
+            dt_pagamento: new Date().toISOString().split("T")[0],
+            forma_pagamento: null,
+            plano_contas_id: planoContasId,
+            appointment_id: appointmentId,
+            created_by: user.id,
+            is_sinal: true,
+          });
+        }
+      }
+    } else if (editing) {
+      // Sinal removido na edição → excluir lançamento de sinal existente
+      await supabase
+        .from("lancamento_financeiro")
+        .delete()
+        .eq("appointment_id", appointmentId)
+        .eq("is_sinal", true);
     }
 
     setSaving(false);
